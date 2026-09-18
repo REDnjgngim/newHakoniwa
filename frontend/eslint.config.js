@@ -7,8 +7,10 @@ import prettierConfig from 'eslint-config-prettier';
 
 export default [
     {
+        ignores: ['dist/**', '.vscode/**', '.idea/**', '*.config.js'],
+    },
+    {
         files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'],
-        ignores: ['dist', '.vscode', '.idea', '*.config.js'],
         languageOptions: {
             parser: tseslint.parser,
             parserOptions: {
