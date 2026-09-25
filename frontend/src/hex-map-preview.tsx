@@ -1,30 +1,64 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useCallback, type RefObject, type PointerEvent } from 'react';
+import type { SectorTerrainData } from './types/terrain';
+import { TERRAIN_IMAGE_MAP } from './constants/terrain';
+import terrainDataJson from './mocks/sector_terrain.json';
 
-const GRID_SIZE = 300;
-
-// --- マス設計パラメータ（固定px） ---
-const TILE_SIZE = 32;
-const TILE_GAP = 0;
-const STEP = TILE_SIZE + TILE_GAP;
-
-const MAX_VIEWPORT_W = 3940;
-const MAX_VIEWPORT_H = 2160;
-const MARGIN_TILES = 2;
-
-const MIN_SCALE = 0.1;
-const MAX_SCALE = 10;
-
-// assets 内の画像（land*.gif, hero.pngなど）を一括ロード
-const imageModules = import.meta.glob<{ default: string }>('./assets/*.gif', { eager: true });
-const TILE_IMAGE_SRCS: string[] = Object.values(imageModules).map((mod) => mod.default);
-
-// 座標 (x, y) ごとに一貫したランダムな画像インデックスを返す
-// （スクロールやドラッグしてもマスの絵柄が変わらないようにする決定論的ハッシュ）
-function getTileImageIndex(x: number, y: number, total: number): number {
-    if (total <= 0) return 0;
-    const hash = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-    return Math.floor((hash - Math.floor(hash)) * total);
+// マップ表示・描画設定の型定義
+interface MapRenderOptions {
+    /** 画像のスムージング（falseでドット絵をくっきり表示） */
+    imageSmoothing: boolean;
+    /** サブピクセル描画によるタイルの隙間を防ぐ微小オーバーラップ（px） */
+    overlapPx: number;
 }
+
+interface MapConfig {
+    tileSize: number;
+    initialScale: number;
+    minScale: number;
+    maxScale: number;
+    wheelZoomFactor: number;
+    marginTiles: number;
+    maxViewportWidth: number;
+    maxViewportHeight: number;
+    colors: {
+        fallbackBg: string;
+        fallbackBorder: string;
+    };
+    renderOptions: MapRenderOptions;
+}
+
+// マップ表示の基本設定値
+const MAP_CONFIG: MapConfig = {
+    tileSize: 32, // 地形画像サイズ(px)
+    initialScale: 1.0, // 初期表示倍率
+    minScale: 0.5, // 最小表示倍率
+    maxScale: 10, // 最大表示倍率
+    wheelZoomFactor: 1.15, // マウスホイールでのズーム倍率
+    marginTiles: 2, // 表示領域端から読み込むマスの余剰数
+    maxViewportWidth: 3940, // 最大ビューポート幅
+    maxViewportHeight: 2160, // 最大ビューポート高さ
+    colors: {
+        fallbackBg: '#18324f', // 背景色
+        fallbackBorder: '#2e5b88', // ボーダー色
+    },
+    renderOptions: {
+        imageSmoothing: false, // 画像の平滑化（falseでドット絵をくっきり表示）
+        overlapPx: 0.5, // タイルの隙間を防ぐ微小オーバーラップ（px）
+    },
+};
+
+// Canvas描画オプションの適用処理
+function applyCanvasRenderOptions(ctx: CanvasRenderingContext2D, options: MapRenderOptions) {
+    ctx.imageSmoothingEnabled = options.imageSmoothing;
+}
+
+// サブピクセルの隙間防止オーバーラップを考慮したタイル描画サイズの算出
+function calcTileRenderSize(tileSize: number, options: MapRenderOptions): number {
+    return tileSize + options.overlapPx;
+}
+
+// JSON型をSectorTerrainDataとして扱う
+const sectorData = terrainDataJson as SectorTerrainData;
 
 interface ViewState {
     offsetX: number;
@@ -40,17 +74,7 @@ interface TileRange {
     tileSize: number;
 }
 
-interface TileItem {
-    key: string;
-    px: number;
-    py: number;
-    size: number;
-    imageSrc: string;
-}
-
 export default function HexMapPreview() {
-    const [mode, setMode] = useState<'canvas' | 'dom'>('canvas');
-
     return (
         <div
             style={{
@@ -66,107 +90,37 @@ export default function HexMapPreview() {
                 overflow: 'hidden',
             }}
         >
-            <div style={{ marginBottom: '8px', display: 'flex', gap: '8px', flexShrink: 0 }}>
-                <button
-                    onClick={() => setMode('canvas')}
-                    style={{
-                        padding: '6px 16px',
-                        borderRadius: '4px',
-                        border: '1px solid #2a3a52',
-                        background: mode === 'canvas' ? '#2E6DA4' : 'transparent',
-                        color: '#fff',
-                        cursor: 'pointer',
-                    }}
-                >
-                    Canvas版
-                </button>
-                <button
-                    onClick={() => setMode('dom')}
-                    style={{
-                        padding: '6px 16px',
-                        borderRadius: '4px',
-                        border: '1px solid #2a3a52',
-                        background: mode === 'dom' ? '#2E6DA4' : 'transparent',
-                        color: '#fff',
-                        cursor: 'pointer',
-                    }}
-                >
-                    DOM版
-                </button>
-            </div>
-
-            <div
-                style={{
-                    flex: 1,
-                    width: '100%',
-                    minHeight: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                }}
-            >
-                {mode === 'canvas' ? <CanvasMap /> : <DomMap />}
-            </div>
+            <CanvasMap />
         </div>
     );
 }
 
-// ============================================================
-// 共通の座標変換（Canvas版・DOM版どちらもこれを使う）
-// ============================================================
+// 奇数行を右に半マスずらすoffset座標系でマップ座標→スクリーン座標へ変換
 function tileToPixel(x: number, y: number, view: ViewState) {
     const { offsetX, offsetY, scale } = view;
-    const rowOffset = y % 2 === 1 ? STEP / 2 : 0;
-    const mapPx = x * STEP + rowOffset + STEP * 0.5;
-    const mapPy = y * STEP + STEP * 0.5;
+    const rowOffset = y % 2 === 1 ? MAP_CONFIG.tileSize / 2 : 0;
+    const mapPx = x * MAP_CONFIG.tileSize + rowOffset + MAP_CONFIG.tileSize * 0.5;
+    const mapPy = y * MAP_CONFIG.tileSize + MAP_CONFIG.tileSize * 0.5;
     return { px: mapPx * scale - offsetX, py: mapPy * scale - offsetY };
 }
 
-function getVisibleRange(view: ViewState, width: number, height: number): TileRange {
+// ビューポートカリング: 現在表示範囲に含まれるマス番号の範囲を算出
+function getVisibleRange(view: ViewState, width: number, height: number, mapW: number, mapH: number): TileRange {
     const { offsetX, offsetY, scale } = view;
-    const tileSize = STEP * scale;
-    const firstCol = Math.floor(offsetX / tileSize) - MARGIN_TILES;
-    const lastCol = Math.ceil((offsetX + width) / tileSize) + MARGIN_TILES;
-    const firstRow = Math.floor(offsetY / tileSize) - MARGIN_TILES;
-    const lastRow = Math.ceil((offsetY + height) / tileSize) + MARGIN_TILES;
+    const tileSize = MAP_CONFIG.tileSize * scale;
     return {
-        colStart: Math.max(0, firstCol),
-        colEnd: Math.min(GRID_SIZE - 1, lastCol),
-        rowStart: Math.max(0, firstRow),
-        rowEnd: Math.min(GRID_SIZE - 1, lastRow),
+        colStart: Math.max(0, Math.floor(offsetX / tileSize) - MAP_CONFIG.marginTiles),
+        colEnd: Math.min(mapW - 1, Math.ceil((offsetX + width) / tileSize) + MAP_CONFIG.marginTiles),
+        rowStart: Math.max(0, Math.floor(offsetY / tileSize) - MAP_CONFIG.marginTiles),
+        rowEnd: Math.min(mapH - 1, Math.ceil((offsetY + height) / tileSize) + MAP_CONFIG.marginTiles),
         tileSize,
     };
 }
 
-function computeDomTiles(view: ViewState, width: number, height: number): { tiles: TileItem[]; renderMs: number } {
-    const { colStart, colEnd, rowStart, rowEnd, tileSize } = getVisibleRange(view, width, height);
-    const start = performance.now();
-    const next: TileItem[] = [];
-    for (let y = rowStart; y <= rowEnd; y++) {
-        for (let x = colStart; x <= colEnd; x++) {
-            const { px, py } = tileToPixel(x, y, view);
-            const imgIdx = getTileImageIndex(x, y, TILE_IMAGE_SRCS.length);
-            next.push({
-                key: `${x}_${y}`,
-                px: px - tileSize / 2,
-                py: py - tileSize / 2,
-                size: tileSize,
-                imageSrc: TILE_IMAGE_SRCS[imgIdx] || '',
-            });
-        }
-    }
-    return {
-        tiles: next,
-        renderMs: performance.now() - start,
-    };
-}
-
-// ============================================================
-// 共通のポインター操作フック（ドラッグ+ピンチ）
-// ============================================================
+// ドラッグ・ピンチ・ホイールによるパン/ズーム操作フック
 function usePointerPanZoom(
-    containerRef: React.RefObject<HTMLDivElement | null>,
-    viewRef: React.MutableRefObject<ViewState>,
+    containerRef: RefObject<HTMLDivElement | null>,
+    viewRef: RefObject<ViewState>,
     onChange: () => void
 ) {
     const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
@@ -184,7 +138,7 @@ function usePointerPanZoom(
         return Math.hypot(p1.x - p2.x, p1.y - p2.y);
     }
 
-    const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
         if (!containerRef.current) return;
         const rect = containerRef.current.getBoundingClientRect();
         pointersRef.current.set(e.pointerId, { x: e.clientX - rect.left, y: e.clientY - rect.top });
@@ -202,7 +156,7 @@ function usePointerPanZoom(
         }
     };
 
-    const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const handlePointerMove = (e: PointerEvent<HTMLDivElement>) => {
         if (!pointersRef.current.has(e.pointerId)) return;
         if (!containerRef.current) return;
         const rect = containerRef.current.getBoundingClientRect();
@@ -212,29 +166,28 @@ function usePointerPanZoom(
 
         if (pointersRef.current.size === 2 && pinchRef.current.active) {
             const [p1, p2] = Array.from(pointersRef.current.values());
-            const newDist = dist(p1, p2);
             const pinch = pinchRef.current;
-            let newScale = pinch.startScale * (newDist / pinch.startDist);
-            newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
+            let newScale = pinch.startScale * (dist(p1, p2) / pinch.startDist);
+            newScale = Math.min(MAP_CONFIG.maxScale, Math.max(MAP_CONFIG.minScale, newScale));
             const mapAtCenterX = (pinch.centerX + pinch.startOffsetX) / pinch.startScale;
             const mapAtCenterY = (pinch.centerY + pinch.startOffsetY) / pinch.startScale;
-            const newOffsetX = mapAtCenterX * newScale - pinch.centerX;
-            const newOffsetY = mapAtCenterY * newScale - pinch.centerY;
-            viewRef.current = { offsetX: newOffsetX, offsetY: newOffsetY, scale: newScale };
+            viewRef.current = {
+                offsetX: mapAtCenterX * newScale - pinch.centerX,
+                offsetY: mapAtCenterY * newScale - pinch.centerY,
+                scale: newScale,
+            };
             onChange();
         } else if (pointersRef.current.size === 1) {
-            const dx = next.x - prev.x;
-            const dy = next.y - prev.y;
             viewRef.current = {
                 ...viewRef.current,
-                offsetX: viewRef.current.offsetX - dx,
-                offsetY: viewRef.current.offsetY - dy,
+                offsetX: viewRef.current.offsetX - (next.x - prev.x),
+                offsetY: viewRef.current.offsetY - (next.y - prev.y),
             };
             onChange();
         }
     };
 
-    const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    const handlePointerUp = (e: PointerEvent<HTMLDivElement>) => {
         pointersRef.current.delete(e.pointerId);
         if (pointersRef.current.size < 2) pinchRef.current.active = false;
     };
@@ -245,33 +198,24 @@ function usePointerPanZoom(
 
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
-
             const rect = el.getBoundingClientRect();
             const cursorX = e.clientX - rect.left;
             const cursorY = e.clientY - rect.top;
-
             const { offsetX, offsetY, scale } = viewRef.current;
 
             // 上回転(奥)で拡大、下回転(手前)で縮小
-            const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-            let newScale = scale * zoomFactor;
-            newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
-
+            const zoomFactor = e.deltaY < 0 ? MAP_CONFIG.wheelZoomFactor : 1 / MAP_CONFIG.wheelZoomFactor;
+            const newScale = Math.min(MAP_CONFIG.maxScale, Math.max(MAP_CONFIG.minScale, scale * zoomFactor));
             if (newScale === scale) return;
 
-            // カーソルの指すマップ位置を中心にしてズーム
+            // カーソル位置を中心にズーム
             const mapAtCursorX = (cursorX + offsetX) / scale;
             const mapAtCursorY = (cursorY + offsetY) / scale;
-
-            const newOffsetX = mapAtCursorX * newScale - cursorX;
-            const newOffsetY = mapAtCursorY * newScale - cursorY;
-
             viewRef.current = {
-                offsetX: newOffsetX,
-                offsetY: newOffsetY,
+                offsetX: mapAtCursorX * newScale - cursorX,
+                offsetY: mapAtCursorY * newScale - cursorY,
                 scale: newScale,
             };
-
             onChange();
         };
 
@@ -284,17 +228,31 @@ function usePointerPanZoom(
     return { handlePointerDown, handlePointerMove, handlePointerUp };
 }
 
-// ============================================================
-// Canvas版
-// ============================================================
 function CanvasMap() {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
-    const imagesRef = useRef<HTMLImageElement[]>([]);
+    const imagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
     const statsRef = useRef<HTMLDivElement | null>(null);
     const sizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
+    const initializedRef = useRef(false);
 
-    const viewRef = useRef<ViewState>({ offsetX: 0, offsetY: 0, scale: 1.0 });
+    const { map_width, map_height, terrain_grid } = sectorData;
+
+    // 初期スケールでマップ中央がcanvas中央に来るようoffsetを設定
+    const initView = useCallback(
+        (canvasW: number, canvasH: number) => {
+            const centerMapX = (map_width / 2) * MAP_CONFIG.tileSize + MAP_CONFIG.tileSize * 0.5;
+            const centerMapY = (map_height / 2) * MAP_CONFIG.tileSize + MAP_CONFIG.tileSize * 0.5;
+            viewRef.current = {
+                offsetX: centerMapX * MAP_CONFIG.initialScale - canvasW / 2,
+                offsetY: centerMapY * MAP_CONFIG.initialScale - canvasH / 2,
+                scale: MAP_CONFIG.initialScale,
+            };
+        },
+        [map_width, map_height]
+    );
+
+    const viewRef = useRef<ViewState>({ offsetX: 0, offsetY: 0, scale: MAP_CONFIG.initialScale });
 
     const render = useCallback(() => {
         const canvas = canvasRef.current;
@@ -305,39 +263,53 @@ function CanvasMap() {
         if (width <= 0 || height <= 0) return;
 
         ctx.clearRect(0, 0, width, height);
+        applyCanvasRenderOptions(ctx, MAP_CONFIG.renderOptions);
         const view = viewRef.current;
-        const { colStart, colEnd, rowStart, rowEnd, tileSize } = getVisibleRange(view, width, height);
+        const { colStart, colEnd, rowStart, rowEnd, tileSize } = getVisibleRange(
+            view,
+            width,
+            height,
+            map_width,
+            map_height
+        );
 
-        const images = imagesRef.current;
         let count = 0;
         const start = performance.now();
+
+        // オプションに応じたタイル描画サイズを計算
+        const renderSize = calcTileRenderSize(tileSize, MAP_CONFIG.renderOptions);
+
         for (let y = rowStart; y <= rowEnd; y++) {
             for (let x = colStart; x <= colEnd; x++) {
+                const cell = terrain_grid[y]?.[x];
+                if (!cell) continue;
+
                 const { px, py } = tileToPixel(x, y, view);
                 const drawX = px - tileSize / 2;
                 const drawY = py - tileSize / 2;
 
-                const imgIdx = getTileImageIndex(x, y, images.length);
-                const img = images[imgIdx];
+                const imgSrc = TERRAIN_IMAGE_MAP[cell.type];
+                const img = imagesRef.current.get(imgSrc);
 
                 if (img && img.complete && img.naturalWidth > 0) {
-                    ctx.drawImage(img, drawX, drawY, tileSize, tileSize);
+                    ctx.drawImage(img, drawX, drawY, renderSize, renderSize);
                 } else {
-                    ctx.fillStyle = '#18324f';
-                    ctx.fillRect(drawX, drawY, tileSize, tileSize);
-                    ctx.strokeStyle = '#2e5b88';
-                    ctx.strokeRect(drawX, drawY, tileSize, tileSize);
+                    ctx.fillStyle = MAP_CONFIG.colors.fallbackBg;
+                    ctx.fillRect(drawX, drawY, renderSize, renderSize);
+                    ctx.strokeStyle = MAP_CONFIG.colors.fallbackBorder;
+                    ctx.strokeRect(drawX, drawY, renderSize, renderSize);
                 }
                 count++;
             }
         }
+
         const elapsed = performance.now() - start;
         if (statsRef.current) {
-            statsRef.current.textContent = `[Canvas] 描画: ${elapsed.toFixed(2)}ms / マス数: ${count} / 表示領域: ${width}x${height} (最大: ${MAX_VIEWPORT_W}x${MAX_VIEWPORT_H})`;
+            statsRef.current.textContent = `描画: ${elapsed.toFixed(2)}ms / マス数: ${count} / 表示領域: ${width}x${height}`;
         }
-    }, []);
+    }, [map_width, map_height, terrain_grid]);
 
-    // ResizeObserver でコンテナのサイズに自動追従（上限: MAX_VIEWPORT_W x MAX_VIEWPORT_H）
+    // Canvasサイズをコンテナに追従させ、初回のみ中央揃えを実行
     useEffect(() => {
         const container = containerRef.current;
         const canvas = canvasRef.current;
@@ -345,8 +317,8 @@ function CanvasMap() {
 
         const updateSize = () => {
             const rect = container.getBoundingClientRect();
-            const w = Math.min(MAX_VIEWPORT_W, Math.max(1, Math.round(rect.width)));
-            const h = Math.min(MAX_VIEWPORT_H, Math.max(1, Math.round(rect.height)));
+            const w = Math.min(MAP_CONFIG.maxViewportWidth, Math.max(1, Math.round(rect.width)));
+            const h = Math.min(MAP_CONFIG.maxViewportHeight, Math.max(1, Math.round(rect.height)));
             const dpr = window.devicePixelRatio || 1;
 
             sizeRef.current = { width: w, height: h };
@@ -356,30 +328,33 @@ function CanvasMap() {
             canvas.style.height = `${h}px`;
             canvas.getContext('2d')?.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+            if (!initializedRef.current) {
+                initView(w, h);
+                initializedRef.current = true;
+            }
+
             render();
         };
 
         updateSize();
 
-        const observer = new ResizeObserver(() => {
-            updateSize();
-        });
+        const observer = new ResizeObserver(updateSize);
         observer.observe(container);
-
         return () => {
             observer.disconnect();
         };
-    }, [render]);
+    }, [render, initView]);
 
+    // 地形タイプに対応する全画像を事前ロード
     useEffect(() => {
-        // 画像を一括ロード
-        const imgs = TILE_IMAGE_SRCS.map((src) => {
+        const map = imagesRef.current;
+        for (const src of Object.values(TERRAIN_IMAGE_MAP)) {
+            if (map.has(src)) continue;
             const img = new Image();
             img.onload = () => render();
             img.src = src;
-            return img;
-        });
-        imagesRef.current = imgs;
+            map.set(src, img);
+        }
     }, [render]);
 
     const { handlePointerDown, handlePointerMove, handlePointerUp } = usePointerPanZoom(containerRef, viewRef, render);
@@ -399,7 +374,7 @@ function CanvasMap() {
                 ref={statsRef}
                 style={{ color: '#ffd27a', fontSize: '13px', marginBottom: '8px', textAlign: 'center', flexShrink: 0 }}
             >
-                [Canvas] 描画: -ms / マス数: 0
+                描画: -ms / マス数: 0
             </div>
             <div
                 ref={containerRef}
@@ -410,9 +385,9 @@ function CanvasMap() {
                 style={{
                     position: 'relative',
                     width: '100%',
-                    maxWidth: `${MAX_VIEWPORT_W}px`,
+                    maxWidth: `${MAP_CONFIG.maxViewportWidth}px`,
                     height: '100%',
-                    maxHeight: `${MAX_VIEWPORT_H}px`,
+                    maxHeight: `${MAP_CONFIG.maxViewportHeight}px`,
                     touchAction: 'none',
                     overflow: 'hidden',
                     border: '1px solid #2a3a52',
@@ -421,113 +396,6 @@ function CanvasMap() {
                 }}
             >
                 <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0 }} />
-            </div>
-        </div>
-    );
-}
-
-// ============================================================
-// DOM版：可視範囲のマスだけ<div>を生成して背景画像を敷く
-// ============================================================
-function DomMap() {
-    const containerRef = useRef<HTMLDivElement | null>(null);
-    const viewRef = useRef<ViewState>({ offsetX: 0, offsetY: 0, scale: 1.0 });
-    const [size, setSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
-    const [tilesData, setTilesData] = useState<{ tiles: TileItem[]; renderMs: number }>({ tiles: [], renderMs: 0 });
-
-    const render = useCallback(() => {
-        const { width, height } = size;
-        if (width <= 0 || height <= 0) return;
-        const res = computeDomTiles(viewRef.current, width, height);
-        setTilesData(res);
-    }, [size]);
-
-    useEffect(() => {
-        const container = containerRef.current;
-        if (!container) return;
-
-        const updateSize = () => {
-            const rect = container.getBoundingClientRect();
-            const w = Math.min(MAX_VIEWPORT_W, Math.max(1, Math.round(rect.width)));
-            const h = Math.min(MAX_VIEWPORT_H, Math.max(1, Math.round(rect.height)));
-            setSize({ width: w, height: h });
-        };
-
-        updateSize();
-
-        const observer = new ResizeObserver(() => {
-            updateSize();
-        });
-        observer.observe(container);
-
-        return () => {
-            observer.disconnect();
-        };
-    }, []);
-
-    useEffect(() => {
-        if (size.width > 0 && size.height > 0) {
-            render();
-        }
-    }, [size, render]);
-
-    const { handlePointerDown, handlePointerMove, handlePointerUp } = usePointerPanZoom(containerRef, viewRef, render);
-
-    return (
-        <div
-            style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                minHeight: 0,
-            }}
-        >
-            <div
-                style={{ color: '#ffd27a', fontSize: '13px', marginBottom: '8px', textAlign: 'center', flexShrink: 0 }}
-            >
-                [DOM] 座標計算: {tilesData.renderMs.toFixed(2)}ms / DOM要素数: {tilesData.tiles.length} / 表示領域:{' '}
-                {size.width}x{size.height} (最大: {MAX_VIEWPORT_W}x{MAX_VIEWPORT_H})
-                <br />
-                <span style={{ color: '#5a7396', fontSize: '11px' }}>
-                    ※これはdiv生成の座標計算のみの時間。実際のDOM反映・レイアウトコストは含まれません
-                </span>
-            </div>
-            <div
-                ref={containerRef}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={handlePointerUp}
-                style={{
-                    position: 'relative',
-                    width: '100%',
-                    maxWidth: `${MAX_VIEWPORT_W}px`,
-                    height: '100%',
-                    maxHeight: `${MAX_VIEWPORT_H}px`,
-                    touchAction: 'none',
-                    overflow: 'hidden',
-                    border: '1px solid #2a3a52',
-                    background: '#0e1a2b',
-                    boxSizing: 'border-box',
-                }}
-            >
-                {tilesData.tiles.map((t) => (
-                    <div
-                        key={t.key}
-                        style={{
-                            position: 'absolute',
-                            left: t.px,
-                            top: t.py,
-                            width: t.size,
-                            height: t.size,
-                            backgroundColor: '#18324f',
-                            backgroundImage: t.imageSrc ? `url(${t.imageSrc})` : undefined,
-                            backgroundSize: 'cover',
-                        }}
-                    />
-                ))}
             </div>
         </div>
     );
