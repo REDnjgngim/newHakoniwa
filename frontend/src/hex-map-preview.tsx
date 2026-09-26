@@ -104,6 +104,28 @@ function tileToPixel(x: number, y: number, view: ViewState) {
     return { px: mapPx * scale - offsetX, py: mapPy * scale - offsetY };
 }
 
+// スクリーンピクセル座標からタイルグリッド座標(x, y)を逆算（範囲外ならnull）
+function pixelToTile(
+    px: number,
+    py: number,
+    view: ViewState,
+    mapW: number,
+    mapH: number
+): { x: number; y: number } | null {
+    const { offsetX, offsetY, scale } = view;
+    const mapPx = (px + offsetX) / scale;
+    const mapPy = (py + offsetY) / scale;
+
+    const y = Math.floor(mapPy / MAP_CONFIG.tileSize);
+    if (y < 0 || y >= mapH) return null;
+
+    const rowOffset = y % 2 === 1 ? MAP_CONFIG.tileSize / 2 : 0;
+    const x = Math.floor((mapPx - rowOffset) / MAP_CONFIG.tileSize);
+    if (x < 0 || x >= mapW) return null;
+
+    return { x, y };
+}
+
 // ビューポートカリング: 現在表示範囲に含まれるマス番号の範囲を算出
 function getVisibleRange(view: ViewState, width: number, height: number, mapW: number, mapH: number): TileRange {
     const { offsetX, offsetY, scale } = view;
@@ -253,6 +275,8 @@ function CanvasMap() {
     const statsRef = useRef<HTMLDivElement | null>(null);
     const sizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
     const initializedRef = useRef(false);
+    const selectedTileRef = useRef<{ x: number; y: number } | null>(null);
+    const selectedHudRef = useRef<HTMLDivElement | null>(null);
 
     const { map_width, map_height, terrain_grid } = sectorData;
 
@@ -321,9 +345,30 @@ function CanvasMap() {
             }
         }
 
+        // 選択タイルのハイライト描画
+        if (selectedTileRef.current) {
+            const { x, y } = selectedTileRef.current;
+            const { px, py } = tileToPixel(x, y, view);
+            const drawX = px - tileSize / 2;
+            const drawY = py - tileSize / 2;
+
+            ctx.fillStyle = 'rgba(255, 235, 59, 0.4)';
+            ctx.fillRect(drawX, drawY, renderSize, renderSize);
+            ctx.strokeStyle = '#fff176';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(drawX, drawY, renderSize, renderSize);
+        }
+
         const elapsed = performance.now() - start;
         if (statsRef.current) {
             statsRef.current.textContent = `描画: ${elapsed.toFixed(2)}ms / マス数: ${count} / 表示領域: ${width}x${height}`;
+        }
+        if (selectedHudRef.current) {
+            if (selectedTileRef.current) {
+                selectedHudRef.current.textContent = `選択: (x=${selectedTileRef.current.x}, y=${selectedTileRef.current.y})`;
+            } else {
+                selectedHudRef.current.textContent = '選択: -';
+            }
         }
     }, [map_width, map_height, terrain_grid]);
 
@@ -375,7 +420,27 @@ function CanvasMap() {
         }
     }, [render]);
 
-    const { handlePointerDown, handlePointerMove, handlePointerUp } = usePointerPanZoom(containerRef, viewRef, render);
+    const { handlePointerDown, handlePointerMove, handlePointerUp, isDraggingRef } = usePointerPanZoom(
+        containerRef,
+        viewRef,
+        render
+    );
+
+    const onContainerPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+        const wasDragging = isDraggingRef.current;
+        handlePointerUp(e);
+
+        if (!wasDragging && containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+            const tile = pixelToTile(clickX, clickY, viewRef.current, map_width, map_height);
+            if (tile) {
+                selectedTileRef.current = tile;
+                render();
+            }
+        }
+    };
 
     return (
         <div
@@ -395,10 +460,16 @@ function CanvasMap() {
                 描画: -ms / マス数: 0
             </div>
             <div
+                ref={selectedHudRef}
+                style={{ color: '#ffd27a', fontSize: '13px', marginBottom: '8px', textAlign: 'center', flexShrink: 0 }}
+            >
+                選択: -
+            </div>
+            <div
                 ref={containerRef}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
+                onPointerUp={onContainerPointerUp}
                 onPointerCancel={handlePointerUp}
                 style={{
                     position: 'relative',
