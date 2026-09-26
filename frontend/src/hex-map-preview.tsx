@@ -124,6 +124,8 @@ function usePointerPanZoom(
     onChange: () => void
 ) {
     const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+    const dragStartRef = useRef<{ x: number; y: number } | null>(null);
+    const isDraggingRef = useRef(false);
     const pinchRef = useRef({
         active: false,
         startDist: 0,
@@ -141,8 +143,14 @@ function usePointerPanZoom(
     const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
         if (!containerRef.current) return;
         const rect = containerRef.current.getBoundingClientRect();
-        pointersRef.current.set(e.pointerId, { x: e.clientX - rect.left, y: e.clientY - rect.top });
-        if (pointersRef.current.size === 2) {
+        const pos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        pointersRef.current.set(e.pointerId, pos);
+
+        if (pointersRef.current.size === 1) {
+            dragStartRef.current = pos;
+            isDraggingRef.current = false;
+        } else if (pointersRef.current.size === 2) {
+            isDraggingRef.current = true;
             const [p1, p2] = Array.from(pointersRef.current.values());
             pinchRef.current = {
                 active: true,
@@ -165,6 +173,7 @@ function usePointerPanZoom(
         pointersRef.current.set(e.pointerId, next);
 
         if (pointersRef.current.size === 2 && pinchRef.current.active) {
+            isDraggingRef.current = true;
             const [p1, p2] = Array.from(pointersRef.current.values());
             const pinch = pinchRef.current;
             let newScale = pinch.startScale * (dist(p1, p2) / pinch.startDist);
@@ -178,6 +187,12 @@ function usePointerPanZoom(
             };
             onChange();
         } else if (pointersRef.current.size === 1) {
+            if (dragStartRef.current) {
+                const moved = Math.hypot(next.x - dragStartRef.current.x, next.y - dragStartRef.current.y);
+                if (moved > 4) {
+                    isDraggingRef.current = true;
+                }
+            }
             viewRef.current = {
                 ...viewRef.current,
                 offsetX: viewRef.current.offsetX - (next.x - prev.x),
@@ -189,6 +204,9 @@ function usePointerPanZoom(
 
     const handlePointerUp = (e: PointerEvent<HTMLDivElement>) => {
         pointersRef.current.delete(e.pointerId);
+        if (pointersRef.current.size === 0) {
+            dragStartRef.current = null;
+        }
         if (pointersRef.current.size < 2) pinchRef.current.active = false;
     };
 
@@ -225,7 +243,7 @@ function usePointerPanZoom(
         };
     }, [containerRef, viewRef, onChange]);
 
-    return { handlePointerDown, handlePointerMove, handlePointerUp };
+    return { handlePointerDown, handlePointerMove, handlePointerUp, isDraggingRef };
 }
 
 function CanvasMap() {
