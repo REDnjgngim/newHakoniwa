@@ -345,20 +345,6 @@ function CanvasMap() {
             }
         }
 
-        // 選択タイルのハイライト描画
-        if (selectedTileRef.current) {
-            const { x, y } = selectedTileRef.current;
-            const { px, py } = tileToPixel(x, y, view);
-            const drawX = px - tileSize / 2;
-            const drawY = py - tileSize / 2;
-
-            ctx.fillStyle = 'rgba(255, 235, 59, 0.4)';
-            ctx.fillRect(drawX, drawY, renderSize, renderSize);
-            ctx.strokeStyle = '#fff176';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(drawX, drawY, renderSize, renderSize);
-        }
-
         const elapsed = performance.now() - start;
         if (statsRef.current) {
             statsRef.current.textContent = `描画: ${elapsed.toFixed(2)}ms / マス数: ${count} / 表示領域: ${width}x${height}`;
