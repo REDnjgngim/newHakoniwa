@@ -24,6 +24,12 @@ interface MapConfig {
         fallbackBg: string;
         fallbackBorder: string;
     };
+    cometAnimation: {
+        durationMs: number;
+        trailRatio: number;
+        segments: number;
+        lineWidth: number;
+    };
     renderOptions: MapRenderOptions;
 }
 
@@ -40,6 +46,12 @@ const MAP_CONFIG: MapConfig = {
     colors: {
         fallbackBg: '#18324f', // 背景色
         fallbackBorder: '#2e5b88', // ボーダー色
+    },
+    cometAnimation: {
+        durationMs: 3000, // 1周にかかるミリ秒
+        trailRatio: 0.25, // 残像の長さ（外周全体に対する割合: 1/4 = 1辺分）
+        segments: 100, // 残像を構成する線分の分割数
+        lineWidth: 2, // 線の太さ(px)
     },
     renderOptions: {
         imageSmoothing: false, // 画像の平滑化（falseでドット絵をくっきり表示）
@@ -76,20 +88,7 @@ interface TileRange {
 
 export default function HexMapPreview() {
     return (
-        <div
-            style={{
-                width: '100%',
-                height: '100vh',
-                background: '#0e1a2b',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '12px',
-                boxSizing: 'border-box',
-                fontFamily: 'sans-serif',
-                overflow: 'hidden',
-            }}
-        >
+        <div className="w-full h-screen bg-[#0e1a2b] flex flex-col items-center p-3 box-border font-sans overflow-hidden">
             <CanvasMap />
         </div>
     );
@@ -124,6 +123,64 @@ function pixelToTile(
     if (x < 0 || x >= mapW) return null;
 
     return { x, y };
+}
+
+// タイル外周上の正規化位置 t ∈ [0, 1) からスクリーン座標を算出（時計回り: 上辺→右辺→下辺→左辺）
+function perimeterPoint(t: number, drawX: number, drawY: number, size: number): { x: number; y: number } {
+    // 0 <= t < 1 に正規化
+    const normT = ((t % 1) + 1) % 1;
+    if (normT < 0.25) {
+        // 上辺: 左 (drawX, drawY) → 右 (drawX + size, drawY)
+        return { x: drawX + normT * 4 * size, y: drawY };
+    } else if (normT < 0.5) {
+        // 右辺: 上 (drawX + size, drawY) → 下 (drawX + size, drawY + size)
+        return { x: drawX + size, y: drawY + (normT - 0.25) * 4 * size };
+    } else if (normT < 0.75) {
+        // 下辺: 右 (drawX + size, drawY + size) → 左 (drawX, drawY + size)
+        return { x: drawX + size - (normT - 0.5) * 4 * size, y: drawY + size };
+    } else {
+        // 左辺: 下 (drawX, drawY + size) → 上 (drawX, drawY)
+        return { x: drawX, y: drawY + size - (normT - 0.75) * 4 * size };
+    }
+}
+
+// 選択タイルの外周（マスの内側）を周回する彗星エフェクトを描画（連続した滑らかな残像線）
+function drawCometEffect(ctx: CanvasRenderingContext2D, t: number, drawX: number, drawY: number, size: number): void {
+    const { trailRatio, segments, lineWidth } = MAP_CONFIG.cometAnimation;
+
+    // 線の中心がタイルの境界上だと半分外側にはみ出すため、lineWidth / 2 だけ内側にオフセット
+    const inset = lineWidth / 2;
+    const innerX = drawX + inset;
+    const innerY = drawY + inset;
+    const innerSize = size - lineWidth;
+
+    ctx.save();
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'butt';
+    ctx.lineJoin = 'miter';
+
+    // 尾から先端に向かって細分化された線分を描画
+    for (let i = segments - 1; i >= 0; i--) {
+        const ratioStart = (i + 1) / segments;
+        const ratioEnd = i / segments;
+
+        const tStart = t - ratioStart * trailRatio;
+        const tEnd = t - ratioEnd * trailRatio;
+
+        const pStart = perimeterPoint(tStart, innerX, innerY, innerSize);
+        const pEnd = perimeterPoint(tEnd, innerX, innerY, innerSize);
+
+        // 先端に向かってなめらかに明るくなる
+        const alpha = Math.pow(1 - ratioEnd, 1);
+
+        ctx.beginPath();
+        ctx.moveTo(pStart.x, pStart.y);
+        ctx.lineTo(pEnd.x, pEnd.y);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha.toFixed(3)})`;
+        ctx.stroke();
+    }
+
+    ctx.restore();
 }
 
 // ビューポートカリング: 現在表示範囲に含まれるマス番号の範囲を算出
@@ -277,6 +334,8 @@ function CanvasMap() {
     const initializedRef = useRef(false);
     const selectedTileRef = useRef<{ x: number; y: number } | null>(null);
     const selectedHudRef = useRef<HTMLDivElement | null>(null);
+    const animationFrameRef = useRef<number>(0);
+    const animationStartRef = useRef<number>(0);
 
     const { map_width, map_height, terrain_grid } = sectorData;
 
@@ -345,6 +404,18 @@ function CanvasMap() {
             }
         }
 
+        // 選択タイルの彗星エフェクト描画
+        if (selectedTileRef.current) {
+            const { x, y } = selectedTileRef.current;
+            const { px, py } = tileToPixel(x, y, view);
+            const drawX = px - tileSize / 2;
+            const drawY = py - tileSize / 2;
+            const now = performance.now();
+            const elapsedSinceStart = now - animationStartRef.current;
+            const t = (((elapsedSinceStart / MAP_CONFIG.cometAnimation.durationMs) % 1) + 1) % 1;
+            drawCometEffect(ctx, t, drawX, drawY, renderSize);
+        }
+
         const elapsed = performance.now() - start;
         if (statsRef.current) {
             statsRef.current.textContent = `描画: ${elapsed.toFixed(2)}ms / マス数: ${count} / 表示領域: ${width}x${height}`;
@@ -357,6 +428,33 @@ function CanvasMap() {
             }
         }
     }, [map_width, map_height, terrain_grid]);
+
+    const stopCometLoop = useCallback(() => {
+        if (animationFrameRef.current !== 0) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = 0;
+        }
+    }, []);
+
+    const startCometLoop = useCallback(() => {
+        stopCometLoop();
+        animationStartRef.current = performance.now();
+
+        const loop = () => {
+            if (!selectedTileRef.current) return;
+            render();
+            animationFrameRef.current = requestAnimationFrame(loop);
+        };
+
+        animationFrameRef.current = requestAnimationFrame(loop);
+    }, [render, stopCometLoop]);
+
+    // アンマウント時のクリーンアップ
+    useEffect(() => {
+        return () => {
+            stopCometLoop();
+        };
+    }, [stopCometLoop]);
 
     // Canvasサイズをコンテナに追従させ、初回のみ中央揃えを実行
     useEffect(() => {
@@ -423,32 +521,17 @@ function CanvasMap() {
             const tile = pixelToTile(clickX, clickY, viewRef.current, map_width, map_height);
             if (tile) {
                 selectedTileRef.current = tile;
-                render();
+                startCometLoop();
             }
         }
     };
 
     return (
-        <div
-            style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                minHeight: 0,
-            }}
-        >
-            <div
-                ref={statsRef}
-                style={{ color: '#ffd27a', fontSize: '13px', marginBottom: '8px', textAlign: 'center', flexShrink: 0 }}
-            >
+        <div className="flex flex-col items-center w-full h-full min-h-0">
+            <div ref={statsRef} className="text-[#ffd27a] text-[13px] mb-2 text-center shrink-0">
                 描画: -ms / マス数: 0
             </div>
-            <div
-                ref={selectedHudRef}
-                style={{ color: '#ffd27a', fontSize: '13px', marginBottom: '8px', textAlign: 'center', flexShrink: 0 }}
-            >
+            <div ref={selectedHudRef} className="text-[#ffd27a] text-[13px] mb-2 text-center shrink-0">
                 選択: -
             </div>
             <div
