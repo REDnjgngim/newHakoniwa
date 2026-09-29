@@ -25,12 +25,6 @@ interface MapConfig {
         fallbackBg: string;
         fallbackBorder: string;
     };
-    cometAnimation: {
-        durationMs: number;
-        trailRatio: number;
-        segments: number;
-        lineWidth: number;
-    };
     renderOptions: MapRenderOptions;
 }
 
@@ -47,12 +41,6 @@ const MAP_CONFIG: MapConfig = {
     colors: {
         fallbackBg: '#18324f', // 背景色
         fallbackBorder: '#2e5b88', // ボーダー色
-    },
-    cometAnimation: {
-        durationMs: 3000, // 1周にかかるミリ秒
-        trailRatio: 0.25, // 残像の長さ（外周全体に対する割合: 1/4 = 1辺分）
-        segments: 100, // 残像を構成する線分の分割数
-        lineWidth: 2, // 線の太さ(px)
     },
     renderOptions: {
         imageSmoothing: false, // 画像の平滑化（falseでドット絵をくっきり表示）
@@ -110,6 +98,31 @@ const HOVER_GRID_CONFIG: HoverGridConfig = {
     maxLineWidth: 2, // 基準の2倍。達したら以降は一定
     lineWidthScaleExponent: 0.8, // 拡大に対する伸び。座標ラベルの文字サイズと同じカーブにする
     fadeDurationMs: 1000, // ホバー位置が変わってからラインが消えるまでの時間(ms)
+};
+
+// 選択中タイルを示す角ブラケットカーソルの描画設定
+interface CornerCursorConfig {
+    intervalMs: number;
+    pulseDurationMs: number;
+    bracketLenRatio: number;
+    lineWidth: number;
+    outlineWidth: number; // 縁取りを含めた外側の線幅(px)
+    color: string;
+    outlineColor: string;
+    baseScale: number;
+    peakScale: number;
+}
+
+const CORNER_CURSOR_CONFIG: CornerCursorConfig = {
+    intervalMs: 2000, // パルスの周期(ms)
+    pulseDurationMs: 200, // 1回のパルスにかける時間(ms)
+    bracketLenRatio: 0.15, // タイル1辺に対するブラケットの長さの割合
+    lineWidth: 2, // 線の太さ(px)
+    outlineWidth: 4, // 縁取り込みの外側線幅(px)。(5-3)/2 = 各辺1pxが水色の縁取りになる
+    color: '#00a48d', // ブラケット本体の色（エメラルドグリーン）
+    outlineColor: '#7fe9ff', // 縁取りの色（水色）
+    baseScale: 1.0, // 通常時のサイズ倍率
+    peakScale: 1.1, // パルス時のピークサイズ倍率
 };
 
 // 表示倍率に応じたガイドラインの線幅（文字サイズと同じ指数カーブで伸ばし、上下限で頭打ちにする）
@@ -211,60 +224,69 @@ function pixelToTile(
     return { x, y };
 }
 
-// タイル外周上の正規化位置 t ∈ [0, 1) からスクリーン座標を算出（時計回り: 上辺→右辺→下辺→左辺）
-function perimeterPoint(t: number, drawX: number, drawY: number, size: number): { x: number; y: number } {
-    // 0 <= t < 1 に正規化
-    const normT = ((t % 1) + 1) % 1;
-    if (normT < 0.25) {
-        // 上辺: 左 (drawX, drawY) → 右 (drawX + size, drawY)
-        return { x: drawX + normT * 4 * size, y: drawY };
-    } else if (normT < 0.5) {
-        // 右辺: 上 (drawX + size, drawY) → 下 (drawX + size, drawY + size)
-        return { x: drawX + size, y: drawY + (normT - 0.25) * 4 * size };
-    } else if (normT < 0.75) {
-        // 下辺: 右 (drawX + size, drawY + size) → 左 (drawX, drawY + size)
-        return { x: drawX + size - (normT - 0.5) * 4 * size, y: drawY + size };
-    } else {
-        // 左辺: 下 (drawX, drawY + size) → 上 (drawX, drawY)
-        return { x: drawX, y: drawY + size - (normT - 0.75) * 4 * size };
-    }
+// 経過時間からパルスのスケール係数を算出。パルス区間外は常にbaseScaleを返す
+function getPulseScale(elapsedMs: number, cfg: CornerCursorConfig): number {
+    const phase = elapsedMs % cfg.intervalMs;
+    if (phase >= cfg.pulseDurationMs) return cfg.baseScale;
+
+    // 0→1→0の三角波にeaseをかけて、膨らんで戻る動きにする
+    const t = phase / cfg.pulseDurationMs;
+    const triangle = t < 0.5 ? t * 2 : (1 - t) * 2; // 0→1→0
+    const eased = Math.sin((triangle * Math.PI) / 2); // 滑らかさ付与
+    return cfg.baseScale + (cfg.peakScale - cfg.baseScale) * eased;
 }
 
-// 選択タイルの外周（マスの内側）を周回する彗星エフェクトを描画（連続した滑らかな残像線）
-function drawCometEffect(ctx: CanvasRenderingContext2D, t: number, drawX: number, drawY: number, size: number): void {
-    const { trailRatio, segments, lineWidth } = MAP_CONFIG.cometAnimation;
+// 選択タイルの4隅にL字ブラケットを描く。scaleでサイズを拡縮する（中心基準）
+function drawCornerCursor(
+    ctx: CanvasRenderingContext2D,
+    drawX: number,
+    drawY: number,
+    size: number,
+    scale: number
+): void {
+    const cfg = CORNER_CURSOR_CONFIG;
+    const bracketLen = size * cfg.bracketLenRatio;
 
-    // 線の中心がタイルの境界上だと半分外側にはみ出すため、lineWidth / 2 だけ内側にオフセット
-    const inset = lineWidth / 2;
-    const innerX = drawX + inset;
-    const innerY = drawY + inset;
-    const innerSize = size - lineWidth;
+    // scale分だけ中心から拡縮させる
+    const cx = drawX + size / 2;
+    const cy = drawY + size / 2;
+    const half = (size * scale) / 2;
+    const x0 = cx - half;
+    const y0 = cy - half;
+    const x1 = cx + half;
+    const y1 = cy + half;
 
     ctx.save();
-    ctx.lineWidth = lineWidth;
-    ctx.lineCap = 'butt';
-    ctx.lineJoin = 'miter';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
-    // 尾から先端に向かって細分化された線分を描画
-    for (let i = segments - 1; i >= 0; i--) {
-        const ratioStart = (i + 1) / segments;
-        const ratioEnd = i / segments;
+    // 4隅のブラケットを1本のパスとして組み立て、縁取りと本体で使い回す
+    ctx.beginPath();
+    // 左上
+    ctx.moveTo(x0, y0 + bracketLen);
+    ctx.lineTo(x0, y0);
+    ctx.lineTo(x0 + bracketLen, y0);
+    // 右上
+    ctx.moveTo(x1 - bracketLen, y0);
+    ctx.lineTo(x1, y0);
+    ctx.lineTo(x1, y0 + bracketLen);
+    // 右下
+    ctx.moveTo(x1, y1 - bracketLen);
+    ctx.lineTo(x1, y1);
+    ctx.lineTo(x1 - bracketLen, y1);
+    // 左下
+    ctx.moveTo(x0 + bracketLen, y1);
+    ctx.lineTo(x0, y1);
+    ctx.lineTo(x0, y1 - bracketLen);
 
-        const tStart = t - ratioStart * trailRatio;
-        const tEnd = t - ratioEnd * trailRatio;
+    // 太めの水色を下地に描き、その上へ本体色を重ねて細い縁取りを出す
+    ctx.lineWidth = cfg.outlineWidth;
+    ctx.strokeStyle = cfg.outlineColor;
+    ctx.stroke();
 
-        const pStart = perimeterPoint(tStart, innerX, innerY, innerSize);
-        const pEnd = perimeterPoint(tEnd, innerX, innerY, innerSize);
-
-        // 先端に向かってなめらかに明るくなる
-        const alpha = Math.pow(1 - ratioEnd, 1);
-
-        ctx.beginPath();
-        ctx.moveTo(pStart.x, pStart.y);
-        ctx.lineTo(pEnd.x, pEnd.y);
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha.toFixed(3)})`;
-        ctx.stroke();
-    }
+    ctx.lineWidth = cfg.lineWidth;
+    ctx.strokeStyle = cfg.color;
+    ctx.stroke();
 
     ctx.restore();
 }
@@ -611,8 +633,8 @@ function CanvasMap() {
     const hoverStateRef = useRef<HoverState>({ x: null, y: null });
     const hoverFadeStartRef = useRef<number>(0); // ホバー位置が変わった時刻(ms)。ここからフェードアウトを始める
     const hoverFadeFrameRef = useRef<number>(0); // フェードアウト中のrAF ID
-    const animationFrameRef = useRef<number>(0);
-    const animationStartRef = useRef<number>(0);
+    const animationFrameRef = useRef<number>(0); // カーソルアニメーション中のrAF ID
+    const cursorAnimStartRef = useRef<number>(0); // カーソルアニメーション開始時刻(ms)。パルスの位相計算に使う
 
     const { map_width, map_height, terrain_grid } = sectorData;
 
@@ -687,7 +709,7 @@ function CanvasMap() {
         }
     }, [map_width, map_height, terrain_grid]);
 
-    // オーバーレイの再描画。ホバーガイドライン・彗星エフェクト・座標ラベルを描く
+    // オーバーレイの再描画。ホバーガイドライン・選択カーソル・座標ラベルを描く
     const renderOverlay = useCallback(() => {
         const canvas = overlayCanvasRef.current;
         if (!canvas) return;
@@ -698,7 +720,7 @@ function CanvasMap() {
 
         ctx.clearRect(0, 0, width, height);
 
-        // ホバーガイドライン（彗星・ラベルより先に描き、文字に重ならないようにする）
+        // ホバーガイドライン（選択カーソル・ラベルより先に描き、文字に重ならないようにする）
         // ホバー位置が変わった時点から fadeDurationMs かけてフェードアウトする
         const hoverFadeAlpha = calcHoverFadeAlpha(
             hoverFadeStartRef.current,
@@ -716,7 +738,7 @@ function CanvasMap() {
             hoverFadeAlpha
         );
 
-        // 彗星エフェクト
+        // 選択カーソル（2秒周期のパルス付き角ブラケット）
         if (selectedTileRef.current) {
             const view = viewRef.current;
             const tileSize = MAP_CONFIG.tileSize * view.scale;
@@ -725,9 +747,9 @@ function CanvasMap() {
             const { px, py } = tileToPixel(x, y, view);
             const drawX = px - tileSize / 2;
             const drawY = py - tileSize / 2;
-            const elapsed = performance.now() - animationStartRef.current;
-            const t = (((elapsed / MAP_CONFIG.cometAnimation.durationMs) % 1) + 1) % 1;
-            drawCometEffect(ctx, t, drawX, drawY, renderSize);
+            const elapsed = performance.now() - cursorAnimStartRef.current;
+            const scale = getPulseScale(elapsed, CORNER_CURSOR_CONFIG);
+            drawCornerCursor(ctx, drawX, drawY, renderSize, scale);
         }
 
         // 座標ラベル（マップの上端・左端に追従。選択中の列・行は強調）
@@ -740,16 +762,16 @@ function CanvasMap() {
         renderOverlay();
     }, [render, renderOverlay]);
 
-    const stopCometLoop = useCallback(() => {
+    const stopCursorLoop = useCallback(() => {
         if (animationFrameRef.current !== 0) {
             cancelAnimationFrame(animationFrameRef.current);
             animationFrameRef.current = 0;
         }
     }, []);
 
-    const startCometLoop = useCallback(() => {
-        stopCometLoop();
-        animationStartRef.current = performance.now();
+    const startCursorLoop = useCallback(() => {
+        stopCursorLoop();
+        cursorAnimStartRef.current = performance.now();
 
         const loop = () => {
             if (!selectedTileRef.current) return;
@@ -758,7 +780,7 @@ function CanvasMap() {
         };
 
         animationFrameRef.current = requestAnimationFrame(loop);
-    }, [renderOverlay, stopCometLoop]);
+    }, [renderOverlay, stopCursorLoop]);
 
     const stopHoverFadeLoop = useCallback(() => {
         if (hoverFadeFrameRef.current !== 0) {
@@ -815,10 +837,10 @@ function CanvasMap() {
     // アンマウント時のクリーンアップ
     useEffect(() => {
         return () => {
-            stopCometLoop();
+            stopCursorLoop();
             stopHoverFadeLoop();
         };
-    }, [stopCometLoop, stopHoverFadeLoop]);
+    }, [stopCursorLoop, stopHoverFadeLoop]);
 
     // Canvasサイズをコンテナに追従させ、初回のみ中央揃えを実行
     useEffect(() => {
@@ -885,7 +907,7 @@ function CanvasMap() {
             if (selectedHudRef.current) {
                 selectedHudRef.current.textContent = `選択: (x=${tile.x}, y=${tile.y})`;
             }
-            startCometLoop();
+            startCursorLoop();
         });
     };
 
