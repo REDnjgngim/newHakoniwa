@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, type RefObject, type PointerEvent } fro
 import type { SectorTerrainData } from './types/terrain';
 import { TERRAIN_IMAGE_MAP } from './constants/terrain';
 import terrainDataJson from './mocks/sector_terrain.json';
+import { useHoverTracking, type HoverState } from './hooks/use-hover-tracking';
 
 // マップ表示・描画設定の型定義
 interface MapRenderOptions {
@@ -67,6 +68,7 @@ interface OverlayLabelConfig {
     maxFontSize: number;
     fontScaleExponent: number;
     color: string;
+    highlightColor: string;
     haloColor: string;
     haloWidth: number;
     shadowColor: string;
@@ -82,6 +84,7 @@ const OVERLAY_LABEL_CONFIG: OverlayLabelConfig = {
     maxFontSize: 36, // 基準サイズの3倍。達したら以降は一定
     fontScaleExponent: 0.8, // scaleに対する伸び。1.0で比例、小さいほど緩やかに拡大する
     color: '#ffd27a',
+    highlightColor: '#ffffff', // 選択中（クリックで確定）の列・行番号。通常色より明るくして強調する
     haloColor: 'rgba(14, 26, 43, 0.9)', // 縁取り。地形画像の上でも読めるようにする
     haloWidth: 2, // 縁取りの太さ(px)
     shadowColor: '#a0520a', // 影の色。文字色(#ffd27a)より暗いオレンジ
@@ -89,6 +92,40 @@ const OVERLAY_LABEL_CONFIG: OverlayLabelConfig = {
     glyphScaleY: 0.8, // 文字の縦を縮める倍率。モノスペース文字は縦長なので正方形に近づける
     edgeInsetPx: 4, // マップ端からのマージン（マップ端が画面外に出たときは画面端からのマージン）
 };
+
+// ホバー中のマスを示すガイドラインの描画設定
+interface HoverGridConfig {
+    lineColor: string;
+    baseLineWidth: number;
+    minLineWidth: number;
+    maxLineWidth: number;
+    lineWidthScaleExponent: number;
+    fadeDurationMs: number;
+}
+
+const HOVER_GRID_CONFIG: HoverGridConfig = {
+    lineColor: 'rgba(255, 255, 255, 0.5)', // ガイドラインは白。地形画像を隠さないよう少し透過させる
+    baseLineWidth: 1, // scale=1.0時の線幅(px)
+    minLineWidth: 0.5,
+    maxLineWidth: 2, // 基準の2倍。達したら以降は一定
+    lineWidthScaleExponent: 0.8, // 拡大に対する伸び。座標ラベルの文字サイズと同じカーブにする
+    fadeDurationMs: 1000, // ホバー位置が変わってからラインが消えるまでの時間(ms)
+};
+
+// 表示倍率に応じたガイドラインの線幅（文字サイズと同じ指数カーブで伸ばし、上下限で頭打ちにする）
+function calcHoverLineWidth(scale: number): number {
+    const cfg = HOVER_GRID_CONFIG;
+    return Math.min(
+        cfg.maxLineWidth,
+        Math.max(cfg.minLineWidth, cfg.baseLineWidth * Math.pow(scale, cfg.lineWidthScaleExponent))
+    );
+}
+
+// ホバー位置が変わってからの経過時間に応じたガイドラインの不透明度（durationMsかけて1→0へ減衰）
+function calcHoverFadeAlpha(startMs: number, nowMs: number, durationMs: number): number {
+    if (durationMs <= 0) return 0;
+    return Math.max(0, 1 - (nowMs - startMs) / durationMs);
+}
 
 // Canvas描画オプションの適用処理
 function applyCanvasRenderOptions(ctx: CanvasRenderingContext2D, options: MapRenderOptions) {
@@ -284,13 +321,15 @@ function drawLabelText(
 }
 
 // マップの上端・左端に座標ラベルを描画（マップ端が画面外に出た軸は画面端に留める）
+// selectedTile に指定された列・行のラベルは強調色で描画する（ホバーでは変えない）
 function drawCoordLabels(
     ctx: CanvasRenderingContext2D,
     view: ViewState,
     width: number,
     height: number,
     mapW: number,
-    mapH: number
+    mapH: number,
+    selectedTile: { x: number; y: number } | null
 ): void {
     const cfg = OVERLAY_LABEL_CONFIG;
     // 拡大に対しては指数カーブで緩やかに伸ばし、上下限で頭打ちにする
@@ -323,6 +362,8 @@ function drawCoordLabels(
     ctx.textBaseline = 'bottom';
     for (let x = colStart; x <= colEnd; x++) {
         const { px } = tileToPixel(x, 0, view);
+        // 選択中の列番号だけ強調色にする
+        ctx.fillStyle = selectedTile?.x === x ? cfg.highlightColor : cfg.color;
         drawLabelText(ctx, String(x), px + columnLabelOffsetX, columnLabelY, shadowOffset, cfg);
     }
 
@@ -334,9 +375,97 @@ function drawCoordLabels(
         const label = String(y);
         const labelWidth = ctx.measureText(label).width;
         const rowLabelX = Math.max(cfg.edgeInsetPx + labelWidth, mapLeftX - cfg.edgeInsetPx);
+        // 選択中の行番号だけ強調色にする
+        ctx.fillStyle = selectedTile?.y === y ? cfg.highlightColor : cfg.color;
         drawLabelText(ctx, label, rowLabelX, py, shadowOffset, cfg);
     }
 
+    ctx.restore();
+}
+
+// ホバー中のマスの行の上辺・下辺を、可視列の範囲（マップの左右端まで）に描画
+// 行の上下端はその行のどのマスでも同じy（半マスずれは横方向のみ）なので、常に一直線の2本になる
+function drawHoverHorizontalLines(
+    ctx: CanvasRenderingContext2D,
+    hoverY: number,
+    view: ViewState,
+    colStart: number,
+    colEnd: number
+): void {
+    const { py } = tileToPixel(0, hoverY, view);
+    const halfTile = (MAP_CONFIG.tileSize * view.scale) / 2;
+    // 可視列の左端・右端のマス辺（奇数行は半マス右へずれるため、行ごとの中心xから求める）
+    const leftX = tileToPixel(colStart, hoverY, view).px - halfTile;
+    const rightX = tileToPixel(colEnd, hoverY, view).px + halfTile;
+
+    ctx.beginPath();
+    ctx.moveTo(leftX, py - halfTile);
+    ctx.lineTo(rightX, py - halfTile);
+    ctx.moveTo(leftX, py + halfTile);
+    ctx.lineTo(rightX, py + halfTile);
+    ctx.stroke();
+}
+
+// ホバー中のマスの左辺・右辺（縦線2本）を描画
+// 奇数行は半マス右へずれるため、行ごとに「タイル中心±半マス」へ縦線分を描き、
+// 行の境界ではずれ幅（半マス）を横線でつないで階段状の連続した輪郭にする
+function drawHoverVerticalLines(
+    ctx: CanvasRenderingContext2D,
+    hoverX: number,
+    view: ViewState,
+    rowStart: number,
+    rowEnd: number
+): void {
+    const halfTile = (MAP_CONFIG.tileSize * view.scale) / 2;
+
+    ctx.beginPath();
+    for (let y = rowStart; y <= rowEnd; y++) {
+        const { px, py } = tileToPixel(hoverX, y, view);
+
+        // 左辺・右辺（この行の高さいっぱい）
+        ctx.moveTo(px - halfTile, py - halfTile);
+        ctx.lineTo(px - halfTile, py + halfTile);
+        ctx.moveTo(px + halfTile, py - halfTile);
+        ctx.lineTo(px + halfTile, py + halfTile);
+
+        // 次の行との境界（y = py + halfTile）に、半マスずれた分をつなぐ横線を引く
+        if (y < rowEnd) {
+            const next = tileToPixel(hoverX, y + 1, view);
+            const boundaryY = py + halfTile;
+            ctx.moveTo(px - halfTile, boundaryY);
+            ctx.lineTo(next.px - halfTile, boundaryY);
+            ctx.moveTo(px + halfTile, boundaryY);
+            ctx.lineTo(next.px + halfTile, boundaryY);
+        }
+    }
+    ctx.stroke();
+}
+
+// ホバー中のマスの上下・左右の辺をガイドラインとして描画
+// ホバーしていないとき・フェードアウトしきったとき（alpha <= 0）は何も描かない
+function drawHoverGuideLines(
+    ctx: CanvasRenderingContext2D,
+    hover: HoverState,
+    view: ViewState,
+    width: number,
+    height: number,
+    mapW: number,
+    mapH: number,
+    alpha: number
+): void {
+    const hoverX = hover.x;
+    const hoverY = hover.y;
+    if (hoverX === null || hoverY === null || alpha <= 0) return;
+
+    // 描画範囲は可視範囲に絞る（縦線は行、横線は列。マップ全体を舐めないようにする）
+    const { colStart, colEnd, rowStart, rowEnd } = getVisibleLabelRange(view, width, height, mapW, mapH);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = HOVER_GRID_CONFIG.lineColor;
+    ctx.lineWidth = calcHoverLineWidth(view.scale);
+    drawHoverHorizontalLines(ctx, hoverY, view, colStart, colEnd);
+    drawHoverVerticalLines(ctx, hoverX, view, rowStart, rowEnd);
     ctx.restore();
 }
 
@@ -479,6 +608,9 @@ function CanvasMap() {
     const initializedRef = useRef(false);
     const selectedTileRef = useRef<{ x: number; y: number } | null>(null);
     const selectedHudRef = useRef<HTMLDivElement | null>(null);
+    const hoverStateRef = useRef<HoverState>({ x: null, y: null });
+    const hoverFadeStartRef = useRef<number>(0); // ホバー位置が変わった時刻(ms)。ここからフェードアウトを始める
+    const hoverFadeFrameRef = useRef<number>(0); // フェードアウト中のrAF ID
     const animationFrameRef = useRef<number>(0);
     const animationStartRef = useRef<number>(0);
 
@@ -555,7 +687,7 @@ function CanvasMap() {
         }
     }, [map_width, map_height, terrain_grid]);
 
-    // オーバーレイの再描画。彗星エフェクトと座標ラベルを描く
+    // オーバーレイの再描画。ホバーガイドライン・彗星エフェクト・座標ラベルを描く
     const renderOverlay = useCallback(() => {
         const canvas = overlayCanvasRef.current;
         if (!canvas) return;
@@ -565,6 +697,24 @@ function CanvasMap() {
         if (width <= 0 || height <= 0) return;
 
         ctx.clearRect(0, 0, width, height);
+
+        // ホバーガイドライン（彗星・ラベルより先に描き、文字に重ならないようにする）
+        // ホバー位置が変わった時点から fadeDurationMs かけてフェードアウトする
+        const hoverFadeAlpha = calcHoverFadeAlpha(
+            hoverFadeStartRef.current,
+            performance.now(),
+            HOVER_GRID_CONFIG.fadeDurationMs
+        );
+        drawHoverGuideLines(
+            ctx,
+            hoverStateRef.current,
+            viewRef.current,
+            width,
+            height,
+            map_width,
+            map_height,
+            hoverFadeAlpha
+        );
 
         // 彗星エフェクト
         if (selectedTileRef.current) {
@@ -580,8 +730,8 @@ function CanvasMap() {
             drawCometEffect(ctx, t, drawX, drawY, renderSize);
         }
 
-        // 座標ラベル（マップの上端・左端に追従）
-        drawCoordLabels(ctx, viewRef.current, width, height, map_width, map_height);
+        // 座標ラベル（マップの上端・左端に追従。選択中の列・行は強調）
+        drawCoordLabels(ctx, viewRef.current, width, height, map_width, map_height, selectedTileRef.current);
     }, [map_width, map_height]);
 
     // パン・ズーム・リサイズ時に両レイヤーを再描画する
@@ -610,12 +760,65 @@ function CanvasMap() {
         animationFrameRef.current = requestAnimationFrame(loop);
     }, [renderOverlay, stopCometLoop]);
 
+    const stopHoverFadeLoop = useCallback(() => {
+        if (hoverFadeFrameRef.current !== 0) {
+            cancelAnimationFrame(hoverFadeFrameRef.current);
+            hoverFadeFrameRef.current = 0;
+        }
+    }, []);
+
+    // フェードアウト中だけオーバーレイを再描画し続け、消えきったらループを止める
+    const startHoverFadeLoop = useCallback(() => {
+        stopHoverFadeLoop();
+
+        const loop = () => {
+            // フェード完了時: alpha=0 で描き直してラインを完全に消してからループを止める
+            if (performance.now() - hoverFadeStartRef.current >= HOVER_GRID_CONFIG.fadeDurationMs) {
+                hoverFadeFrameRef.current = 0;
+                renderOverlay();
+                return;
+            }
+            renderOverlay();
+            hoverFadeFrameRef.current = requestAnimationFrame(loop);
+        };
+
+        hoverFadeFrameRef.current = requestAnimationFrame(loop);
+    }, [renderOverlay, stopHoverFadeLoop]);
+
+    // ホバー位置が変わったとき: ラインを表示してフェードアウトを開始する（解除時は即座に消す）
+    const handleHoverChange = useCallback(() => {
+        const hover = hoverStateRef.current;
+        if (hover.x === null || hover.y === null) {
+            stopHoverFadeLoop();
+            renderOverlay();
+            return;
+        }
+
+        hoverFadeStartRef.current = performance.now();
+        startHoverFadeLoop();
+    }, [renderOverlay, startHoverFadeLoop, stopHoverFadeLoop]);
+
+    // ポインター位置→マス座標の変換（viewはref経由で常に最新の表示状態を参照する）
+    const resolveHoverCell = useCallback(
+        (localX: number, localY: number) => pixelToTile(localX, localY, viewRef.current, map_width, map_height),
+        [map_width, map_height]
+    );
+
+    // ホバー追跡（ポインター操作の共通基盤）。位置が変わったときだけ通知され、ラインの再表示とフェードを開始する
+    const { handlePointerMoveForHover, handlePointerLeaveForHover, handleTapForHover } = useHoverTracking(
+        hoverStateRef,
+        containerRef,
+        resolveHoverCell,
+        handleHoverChange
+    );
+
     // アンマウント時のクリーンアップ
     useEffect(() => {
         return () => {
             stopCometLoop();
+            stopHoverFadeLoop();
         };
-    }, [stopCometLoop]);
+    }, [stopCometLoop, stopHoverFadeLoop]);
 
     // Canvasサイズをコンテナに追従させ、初回のみ中央揃えを実行
     useEffect(() => {
@@ -673,19 +876,17 @@ function CanvasMap() {
         const wasDragging = isDraggingRef.current;
         handlePointerUp(e);
 
-        if (!wasDragging && containerRef.current) {
-            const rect = containerRef.current.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
-            const tile = pixelToTile(clickX, clickY, viewRef.current, map_width, map_height);
-            if (tile) {
-                selectedTileRef.current = tile;
-                if (selectedHudRef.current) {
-                    selectedHudRef.current.textContent = `選択: (x=${tile.x}, y=${tile.y})`;
-                }
-                startCometLoop();
+        // ドラッグ（パン/ピンチ）をクリックと誤認しない
+        if (wasDragging) return;
+
+        // マウス・ペンはホバー中のマスをクリックで即確定、タッチは同一マスへの2回目のタップで確定する
+        handleTapForHover(e, (tile) => {
+            selectedTileRef.current = tile;
+            if (selectedHudRef.current) {
+                selectedHudRef.current.textContent = `選択: (x=${tile.x}, y=${tile.y})`;
             }
-        }
+            startCometLoop();
+        });
     };
 
     return (
@@ -699,9 +900,13 @@ function CanvasMap() {
             <div
                 ref={containerRef}
                 onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
+                onPointerMove={(e) => {
+                    handlePointerMove(e);
+                    handlePointerMoveForHover(e);
+                }}
                 onPointerUp={onContainerPointerUp}
                 onPointerCancel={handlePointerUp}
+                onPointerLeave={handlePointerLeaveForHover}
                 style={{
                     position: 'relative',
                     width: '100%',
