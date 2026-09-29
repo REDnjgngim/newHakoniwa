@@ -69,6 +69,16 @@ function calcTileRenderSize(tileSize: number, options: MapRenderOptions): number
     return tileSize + options.overlapPx;
 }
 
+// Canvasの内部解像度をDPRに合わせ、CSSサイズと描画座標系(CSS px)を設定する
+function setupCanvasForDpr(canvas: HTMLCanvasElement, w: number, h: number): void {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    canvas.getContext('2d')?.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
 // JSON型をSectorTerrainDataとして扱う
 const sectorData = terrainDataJson as SectorTerrainData;
 
@@ -327,6 +337,7 @@ function usePointerPanZoom(
 
 function CanvasMap() {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const imagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
     const statsRef = useRef<HTMLDivElement | null>(null);
@@ -404,30 +415,43 @@ function CanvasMap() {
             }
         }
 
-        // 選択タイルの彗星エフェクト描画
-        if (selectedTileRef.current) {
-            const { x, y } = selectedTileRef.current;
-            const { px, py } = tileToPixel(x, y, view);
-            const drawX = px - tileSize / 2;
-            const drawY = py - tileSize / 2;
-            const now = performance.now();
-            const elapsedSinceStart = now - animationStartRef.current;
-            const t = (((elapsedSinceStart / MAP_CONFIG.cometAnimation.durationMs) % 1) + 1) % 1;
-            drawCometEffect(ctx, t, drawX, drawY, renderSize);
-        }
-
         const elapsed = performance.now() - start;
         if (statsRef.current) {
             statsRef.current.textContent = `描画: ${elapsed.toFixed(2)}ms / マス数: ${count} / 表示領域: ${width}x${height}`;
         }
-        if (selectedHudRef.current) {
-            if (selectedTileRef.current) {
-                selectedHudRef.current.textContent = `選択: (x=${selectedTileRef.current.x}, y=${selectedTileRef.current.y})`;
-            } else {
-                selectedHudRef.current.textContent = '選択: -';
-            }
-        }
     }, [map_width, map_height, terrain_grid]);
+
+    // オーバーレイの再描画。彗星エフェクトを描く。後続実装（座標ラベル等）もここに追加する
+    const renderOverlay = useCallback(() => {
+        const canvas = overlayCanvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const { width, height } = sizeRef.current;
+        if (width <= 0 || height <= 0) return;
+
+        ctx.clearRect(0, 0, width, height);
+
+        // 彗星エフェクト
+        if (selectedTileRef.current) {
+            const view = viewRef.current;
+            const tileSize = MAP_CONFIG.tileSize * view.scale;
+            const renderSize = calcTileRenderSize(tileSize, MAP_CONFIG.renderOptions);
+            const { x, y } = selectedTileRef.current;
+            const { px, py } = tileToPixel(x, y, view);
+            const drawX = px - tileSize / 2;
+            const drawY = py - tileSize / 2;
+            const elapsed = performance.now() - animationStartRef.current;
+            const t = (((elapsed / MAP_CONFIG.cometAnimation.durationMs) % 1) + 1) % 1;
+            drawCometEffect(ctx, t, drawX, drawY, renderSize);
+        }
+    }, []);
+
+    // パン・ズーム・リサイズ時に両レイヤーを再描画する
+    const renderAll = useCallback(() => {
+        render();
+        renderOverlay();
+    }, [render, renderOverlay]);
 
     const stopCometLoop = useCallback(() => {
         if (animationFrameRef.current !== 0) {
@@ -442,12 +466,12 @@ function CanvasMap() {
 
         const loop = () => {
             if (!selectedTileRef.current) return;
-            render();
+            renderOverlay();
             animationFrameRef.current = requestAnimationFrame(loop);
         };
 
         animationFrameRef.current = requestAnimationFrame(loop);
-    }, [render, stopCometLoop]);
+    }, [renderOverlay, stopCometLoop]);
 
     // アンマウント時のクリーンアップ
     useEffect(() => {
@@ -466,21 +490,19 @@ function CanvasMap() {
             const rect = container.getBoundingClientRect();
             const w = Math.min(MAP_CONFIG.maxViewportWidth, Math.max(1, Math.round(rect.width)));
             const h = Math.min(MAP_CONFIG.maxViewportHeight, Math.max(1, Math.round(rect.height)));
-            const dpr = window.devicePixelRatio || 1;
 
             sizeRef.current = { width: w, height: h };
-            canvas.width = w * dpr;
-            canvas.height = h * dpr;
-            canvas.style.width = `${w}px`;
-            canvas.style.height = `${h}px`;
-            canvas.getContext('2d')?.setTransform(dpr, 0, 0, dpr, 0, 0);
+            setupCanvasForDpr(canvas, w, h);
+            if (overlayCanvasRef.current) {
+                setupCanvasForDpr(overlayCanvasRef.current, w, h);
+            }
 
             if (!initializedRef.current) {
                 initView(w, h);
                 initializedRef.current = true;
             }
 
-            render();
+            renderAll();
         };
 
         updateSize();
@@ -490,7 +512,7 @@ function CanvasMap() {
         return () => {
             observer.disconnect();
         };
-    }, [render, initView]);
+    }, [renderAll, initView]);
 
     // 地形タイプに対応する全画像を事前ロード
     useEffect(() => {
@@ -507,7 +529,7 @@ function CanvasMap() {
     const { handlePointerDown, handlePointerMove, handlePointerUp, isDraggingRef } = usePointerPanZoom(
         containerRef,
         viewRef,
-        render
+        renderAll
     );
 
     const onContainerPointerUp = (e: PointerEvent<HTMLDivElement>) => {
@@ -521,6 +543,9 @@ function CanvasMap() {
             const tile = pixelToTile(clickX, clickY, viewRef.current, map_width, map_height);
             if (tile) {
                 selectedTileRef.current = tile;
+                if (selectedHudRef.current) {
+                    selectedHudRef.current.textContent = `選択: (x=${tile.x}, y=${tile.y})`;
+                }
                 startCometLoop();
             }
         }
@@ -554,6 +579,10 @@ function CanvasMap() {
                 }}
             >
                 <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0 }} />
+                <canvas
+                    ref={overlayCanvasRef}
+                    style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
+                />
             </div>
         </div>
     );
