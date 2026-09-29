@@ -59,6 +59,37 @@ const MAP_CONFIG: MapConfig = {
     },
 };
 
+// 座標ラベルの描画設定
+interface OverlayLabelConfig {
+    fontFamily: string;
+    baseFontSize: number;
+    minFontSize: number;
+    maxFontSize: number;
+    fontScaleExponent: number;
+    color: string;
+    haloColor: string;
+    haloWidth: number;
+    shadowColor: string;
+    shadowOffsetRatio: number;
+    glyphScaleY: number;
+    edgeInsetPx: number;
+}
+
+const OVERLAY_LABEL_CONFIG: OverlayLabelConfig = {
+    fontFamily: 'monospace',
+    baseFontSize: 12, // scale=1.0時の基準サイズ
+    minFontSize: 6,
+    maxFontSize: 36, // 基準サイズの3倍。達したら以降は一定
+    fontScaleExponent: 0.8, // scaleに対する伸び。1.0で比例、小さいほど緩やかに拡大する
+    color: '#ffd27a',
+    haloColor: 'rgba(14, 26, 43, 0.9)', // 縁取り。地形画像の上でも読めるようにする
+    haloWidth: 2, // 縁取りの太さ(px)
+    shadowColor: '#a0520a', // 影の色。文字色(#ffd27a)より暗いオレンジ
+    shadowOffsetRatio: 0.07, // 影を右下へずらす量。文字サイズに対する比率（最大36pxで約2px）
+    glyphScaleY: 0.8, // 文字の縦を縮める倍率。モノスペース文字は縦長なので正方形に近づける
+    edgeInsetPx: 4, // マップ端からのマージン（マップ端が画面外に出たときは画面端からのマージン）
+};
+
 // Canvas描画オプションの適用処理
 function applyCanvasRenderOptions(ctx: CanvasRenderingContext2D, options: MapRenderOptions) {
     ctx.imageSmoothingEnabled = options.imageSmoothing;
@@ -94,6 +125,14 @@ interface TileRange {
     rowStart: number;
     rowEnd: number;
     tileSize: number;
+}
+
+// ラベル描画用の表示範囲（描画用の余剰マスは含めない）
+interface LabelRange {
+    colStart: number;
+    colEnd: number;
+    rowStart: number;
+    rowEnd: number;
 }
 
 export default function HexMapPreview() {
@@ -204,6 +243,101 @@ function getVisibleRange(view: ViewState, width: number, height: number, mapW: n
         rowEnd: Math.min(mapH - 1, Math.ceil((offsetY + height) / tileSize) + MAP_CONFIG.marginTiles),
         tileSize,
     };
+}
+
+// 画面に映っている列(x)・行(y)の範囲を算出（描画用の余剰マスは付けない）
+function getVisibleLabelRange(view: ViewState, width: number, height: number, mapW: number, mapH: number): LabelRange {
+    const { offsetX, offsetY, scale } = view;
+    const tileSize = MAP_CONFIG.tileSize * scale;
+    return {
+        colStart: Math.max(0, Math.floor(offsetX / tileSize)),
+        colEnd: Math.min(mapW - 1, Math.ceil((offsetX + width) / tileSize)),
+        rowStart: Math.max(0, Math.floor(offsetY / tileSize)),
+        rowEnd: Math.min(mapH - 1, Math.ceil((offsetY + height) / tileSize)),
+    };
+}
+
+// 影→縁取り→本体の順に重ねて文字を描く（影は同じ字形を右下へずらして暗い色で描く）
+function drawLabelText(
+    ctx: CanvasRenderingContext2D,
+    label: string,
+    x: number,
+    y: number,
+    shadowOffset: number,
+    cfg: OverlayLabelConfig
+): void {
+    // 影：ずらし量が潰しの影響を受けないよう画面座標側で移動する
+    ctx.save();
+    ctx.translate(x + shadowOffset, y + shadowOffset);
+    ctx.scale(1, cfg.glyphScaleY);
+    ctx.fillStyle = cfg.shadowColor;
+    ctx.fillText(label, 0, 0);
+    ctx.restore();
+
+    // 本体：アンカー位置で文字の高さのみ縮めて縁取りと本体を重ねる
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(1, cfg.glyphScaleY);
+    ctx.strokeText(label, 0, 0); // 縁取り
+    ctx.fillText(label, 0, 0); // 本体
+    ctx.restore();
+}
+
+// マップの上端・左端に座標ラベルを描画（マップ端が画面外に出た軸は画面端に留める）
+function drawCoordLabels(
+    ctx: CanvasRenderingContext2D,
+    view: ViewState,
+    width: number,
+    height: number,
+    mapW: number,
+    mapH: number
+): void {
+    const cfg = OVERLAY_LABEL_CONFIG;
+    // 拡大に対しては指数カーブで緩やかに伸ばし、上下限で頭打ちにする
+    const fontSize = Math.min(
+        cfg.maxFontSize,
+        Math.max(cfg.minFontSize, cfg.baseFontSize * Math.pow(view.scale, cfg.fontScaleExponent))
+    );
+    // 影のずらし量は文字サイズに比例させ、縮小時に影だけ離れて見えないようにする
+    const shadowOffset = fontSize * cfg.shadowOffsetRatio;
+    const { colStart, colEnd, rowStart, rowEnd } = getVisibleLabelRange(view, width, height, mapW, mapH);
+
+    // tileToPixelはマス中心を返すため、半マス分戻してマップ端のスクリーン座標を得る
+    const tileSize = MAP_CONFIG.tileSize * view.scale;
+    const origin = tileToPixel(0, 0, view);
+    const mapTopY = origin.py - tileSize / 2;
+    const mapLeftX = origin.px - tileSize / 2;
+    // クランプ時も文字が画面外へ出ないよう、縦を縮めた後の文字高で余白を取る
+    const columnLabelY = Math.max(cfg.edgeInsetPx + fontSize * cfg.glyphScaleY, mapTopY - cfg.edgeInsetPx);
+    // 列は奇数行が半マス右へずれてジグザグに並ぶため、偶数行と奇数行の中心の中間（右へ1/4マス）に置く
+    const columnLabelOffsetX = tileSize / 4;
+
+    ctx.save();
+    ctx.font = `${fontSize}px ${cfg.fontFamily}`;
+    ctx.fillStyle = cfg.color;
+    ctx.lineWidth = cfg.haloWidth;
+    ctx.strokeStyle = cfg.haloColor;
+
+    // 上端：列ラベル（y=0行の中心基準。奇数行の半マスずれの影響を受けないようにする）
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    for (let x = colStart; x <= colEnd; x++) {
+        const { px } = tileToPixel(x, 0, view);
+        drawLabelText(ctx, String(x), px + columnLabelOffsetX, columnLabelY, shadowOffset, cfg);
+    }
+
+    // 左端：行ラベル（x=0列の中心基準。縦は常に直線なのでズレない）
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let y = rowStart; y <= rowEnd; y++) {
+        const { py } = tileToPixel(0, y, view);
+        const label = String(y);
+        const labelWidth = ctx.measureText(label).width;
+        const rowLabelX = Math.max(cfg.edgeInsetPx + labelWidth, mapLeftX - cfg.edgeInsetPx);
+        drawLabelText(ctx, label, rowLabelX, py, shadowOffset, cfg);
+    }
+
+    ctx.restore();
 }
 
 // ドラッグ・ピンチ・ホイールによるパン/ズーム操作フック
@@ -421,7 +555,7 @@ function CanvasMap() {
         }
     }, [map_width, map_height, terrain_grid]);
 
-    // オーバーレイの再描画。彗星エフェクトを描く。後続実装（座標ラベル等）もここに追加する
+    // オーバーレイの再描画。彗星エフェクトと座標ラベルを描く
     const renderOverlay = useCallback(() => {
         const canvas = overlayCanvasRef.current;
         if (!canvas) return;
@@ -445,7 +579,10 @@ function CanvasMap() {
             const t = (((elapsed / MAP_CONFIG.cometAnimation.durationMs) % 1) + 1) % 1;
             drawCometEffect(ctx, t, drawX, drawY, renderSize);
         }
-    }, []);
+
+        // 座標ラベル（マップの上端・左端に追従）
+        drawCoordLabels(ctx, viewRef.current, width, height, map_width, map_height);
+    }, [map_width, map_height]);
 
     // パン・ズーム・リサイズ時に両レイヤーを再描画する
     const renderAll = useCallback(() => {
