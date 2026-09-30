@@ -3,187 +3,22 @@ import type { SectorTerrainData } from './types/terrain';
 import { TERRAIN_IMAGE_MAP } from './constants/terrain';
 import terrainDataJson from './mocks/sector_terrain.json';
 import { useHoverTracking, type HoverState } from './hooks/use-hover-tracking';
-
-// マップ表示・描画設定の型定義
-interface MapRenderOptions {
-    /** 画像のスムージング（falseでドット絵をくっきり表示） */
-    imageSmoothing: boolean;
-    /** サブピクセル描画によるタイルの隙間を防ぐ微小オーバーラップ（px） */
-    overlapPx: number;
-}
-
-interface MapConfig {
-    tileSize: number;
-    initialScale: number;
-    minScale: number;
-    maxScale: number;
-    wheelZoomFactor: number;
-    marginTiles: number;
-    maxViewportWidth: number;
-    maxViewportHeight: number;
-    colors: {
-        fallbackBg: string;
-        fallbackBorder: string;
-    };
-    renderOptions: MapRenderOptions;
-}
-
-// マップ表示の基本設定値
-const MAP_CONFIG: MapConfig = {
-    tileSize: 32, // 地形画像サイズ(px)
-    initialScale: 1.0, // 初期表示倍率
-    minScale: 0.5, // 最小表示倍率
-    maxScale: 10, // 最大表示倍率
-    wheelZoomFactor: 1.15, // マウスホイールでのズーム倍率
-    marginTiles: 2, // 表示領域端から読み込むマスの余剰数
-    maxViewportWidth: 3940, // 最大ビューポート幅
-    maxViewportHeight: 2160, // 最大ビューポート高さ
-    colors: {
-        fallbackBg: '#18324f', // 背景色
-        fallbackBorder: '#2e5b88', // ボーダー色
-    },
-    renderOptions: {
-        imageSmoothing: false, // 画像の平滑化（falseでドット絵をくっきり表示）
-        overlapPx: 0.5, // タイルの隙間を防ぐ微小オーバーラップ（px）
-    },
-};
-
-// 座標ラベルの描画設定
-interface OverlayLabelConfig {
-    fontFamily: string;
-    baseFontSize: number;
-    minFontSize: number;
-    maxFontSize: number;
-    fontScaleExponent: number;
-    color: string;
-    highlightColor: string;
-    haloColor: string;
-    haloWidth: number;
-    shadowColor: string;
-    shadowOffsetRatio: number;
-    glyphScaleY: number;
-    edgeInsetPx: number;
-}
-
-const OVERLAY_LABEL_CONFIG: OverlayLabelConfig = {
-    fontFamily: 'monospace',
-    baseFontSize: 12, // scale=1.0時の基準サイズ
-    minFontSize: 6,
-    maxFontSize: 36, // 基準サイズの3倍。達したら以降は一定
-    fontScaleExponent: 0.8, // scaleに対する伸び。1.0で比例、小さいほど緩やかに拡大する
-    color: '#ffd27a',
-    highlightColor: '#ffffff', // 選択中（クリックで確定）の列・行番号。通常色より明るくして強調する
-    haloColor: 'rgba(14, 26, 43, 0.9)', // 縁取り。地形画像の上でも読めるようにする
-    haloWidth: 2, // 縁取りの太さ(px)
-    shadowColor: '#a0520a', // 影の色。文字色(#ffd27a)より暗いオレンジ
-    shadowOffsetRatio: 0.07, // 影を右下へずらす量。文字サイズに対する比率（最大36pxで約2px）
-    glyphScaleY: 0.8, // 文字の縦を縮める倍率。モノスペース文字は縦長なので正方形に近づける
-    edgeInsetPx: 4, // マップ端からのマージン（マップ端が画面外に出たときは画面端からのマージン）
-};
-
-// ホバー中のマスを示すガイドラインの描画設定
-interface HoverGridConfig {
-    lineColor: string;
-    baseLineWidth: number;
-    minLineWidth: number;
-    maxLineWidth: number;
-    lineWidthScaleExponent: number;
-    fadeDurationMs: number;
-}
-
-const HOVER_GRID_CONFIG: HoverGridConfig = {
-    lineColor: 'rgba(255, 255, 255, 0.5)', // ガイドラインは白。地形画像を隠さないよう少し透過させる
-    baseLineWidth: 1, // scale=1.0時の線幅(px)
-    minLineWidth: 0.5,
-    maxLineWidth: 2, // 基準の2倍。達したら以降は一定
-    lineWidthScaleExponent: 0.8, // 拡大に対する伸び。座標ラベルの文字サイズと同じカーブにする
-    fadeDurationMs: 1000, // ホバー位置が変わってからラインが消えるまでの時間(ms)
-};
-
-// 選択中タイルを示す角ブラケットカーソルの描画設定
-interface CornerCursorConfig {
-    intervalMs: number;
-    pulseDurationMs: number;
-    bracketLenRatio: number;
-    lineWidth: number;
-    outlineWidth: number; // 縁取りを含めた外側の線幅(px)
-    color: string;
-    outlineColor: string;
-    baseScale: number;
-    peakScale: number;
-}
-
-const CORNER_CURSOR_CONFIG: CornerCursorConfig = {
-    intervalMs: 2000, // パルスの周期(ms)
-    pulseDurationMs: 200, // 1回のパルスにかける時間(ms)
-    bracketLenRatio: 0.15, // タイル1辺に対するブラケットの長さの割合
-    lineWidth: 2, // 線の太さ(px)
-    outlineWidth: 4, // 縁取り込みの外側線幅(px)。(5-3)/2 = 各辺1pxが水色の縁取りになる
-    color: '#00a48d', // ブラケット本体の色（エメラルドグリーン）
-    outlineColor: '#7fe9ff', // 縁取りの色（水色）
-    baseScale: 1.0, // 通常時のサイズ倍率
-    peakScale: 1.1, // パルス時のピークサイズ倍率
-};
-
-// 表示倍率に応じたガイドラインの線幅（文字サイズと同じ指数カーブで伸ばし、上下限で頭打ちにする）
-function calcHoverLineWidth(scale: number): number {
-    const cfg = HOVER_GRID_CONFIG;
-    return Math.min(
-        cfg.maxLineWidth,
-        Math.max(cfg.minLineWidth, cfg.baseLineWidth * Math.pow(scale, cfg.lineWidthScaleExponent))
-    );
-}
-
-// ホバー位置が変わってからの経過時間に応じたガイドラインの不透明度（durationMsかけて1→0へ減衰）
-function calcHoverFadeAlpha(startMs: number, nowMs: number, durationMs: number): number {
-    if (durationMs <= 0) return 0;
-    return Math.max(0, 1 - (nowMs - startMs) / durationMs);
-}
-
-// Canvas描画オプションの適用処理
-function applyCanvasRenderOptions(ctx: CanvasRenderingContext2D, options: MapRenderOptions) {
-    ctx.imageSmoothingEnabled = options.imageSmoothing;
-}
-
-// サブピクセルの隙間防止オーバーラップを考慮したタイル描画サイズの算出
-function calcTileRenderSize(tileSize: number, options: MapRenderOptions): number {
-    return tileSize + options.overlapPx;
-}
-
-// Canvasの内部解像度をDPRに合わせ、CSSサイズと描画座標系(CSS px)を設定する
-function setupCanvasForDpr(canvas: HTMLCanvasElement, w: number, h: number): void {
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width = `${w}px`;
-    canvas.style.height = `${h}px`;
-    canvas.getContext('2d')?.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
+import type { OverlayLabelConfig, ViewState } from './map/types';
+import { CORNER_CURSOR_SETTINGS, HOVER_GRID_SETTINGS, LABEL_SETTINGS, MAP_VIEW_SETTINGS } from './map/settings';
+import {
+    distance,
+    getVisibleLabelRange,
+    getVisibleRange,
+    pixelToTile,
+    tileToPixel,
+    zoomAroundPoint,
+} from './map/geometry';
+import { applyCanvasRenderOptions, calcTileRenderSize, setupCanvasForDpr } from './map/canvas';
+import { calcHoverFadeAlpha, calcHoverLineWidth } from './map/render/hover-grid';
+import { getPulseScale } from './map/render/corner-cursor';
 
 // JSON型をSectorTerrainDataとして扱う
 const sectorData = terrainDataJson as SectorTerrainData;
-
-interface ViewState {
-    offsetX: number;
-    offsetY: number;
-    scale: number;
-}
-
-interface TileRange {
-    colStart: number;
-    colEnd: number;
-    rowStart: number;
-    rowEnd: number;
-    tileSize: number;
-}
-
-// ラベル描画用の表示範囲（描画用の余剰マスは含めない）
-interface LabelRange {
-    colStart: number;
-    colEnd: number;
-    rowStart: number;
-    rowEnd: number;
-}
 
 export default function HexMapPreview() {
     return (
@@ -191,49 +26,6 @@ export default function HexMapPreview() {
             <CanvasMap />
         </div>
     );
-}
-
-// 奇数行を右に半マスずらすoffset座標系でマップ座標→スクリーン座標へ変換
-function tileToPixel(x: number, y: number, view: ViewState) {
-    const { offsetX, offsetY, scale } = view;
-    const rowOffset = y % 2 === 1 ? MAP_CONFIG.tileSize / 2 : 0;
-    const mapPx = x * MAP_CONFIG.tileSize + rowOffset + MAP_CONFIG.tileSize * 0.5;
-    const mapPy = y * MAP_CONFIG.tileSize + MAP_CONFIG.tileSize * 0.5;
-    return { px: mapPx * scale - offsetX, py: mapPy * scale - offsetY };
-}
-
-// スクリーンピクセル座標からタイルグリッド座標(x, y)を逆算（範囲外ならnull）
-function pixelToTile(
-    px: number,
-    py: number,
-    view: ViewState,
-    mapW: number,
-    mapH: number
-): { x: number; y: number } | null {
-    const { offsetX, offsetY, scale } = view;
-    const mapPx = (px + offsetX) / scale;
-    const mapPy = (py + offsetY) / scale;
-
-    const y = Math.floor(mapPy / MAP_CONFIG.tileSize);
-    if (y < 0 || y >= mapH) return null;
-
-    const rowOffset = y % 2 === 1 ? MAP_CONFIG.tileSize / 2 : 0;
-    const x = Math.floor((mapPx - rowOffset) / MAP_CONFIG.tileSize);
-    if (x < 0 || x >= mapW) return null;
-
-    return { x, y };
-}
-
-// 経過時間からパルスのスケール係数を算出。パルス区間外は常にbaseScaleを返す
-function getPulseScale(elapsedMs: number, cfg: CornerCursorConfig): number {
-    const phase = elapsedMs % cfg.intervalMs;
-    if (phase >= cfg.pulseDurationMs) return cfg.baseScale;
-
-    // 0→1→0の三角波にeaseをかけて、膨らんで戻る動きにする
-    const t = phase / cfg.pulseDurationMs;
-    const triangle = t < 0.5 ? t * 2 : (1 - t) * 2; // 0→1→0
-    const eased = Math.sin((triangle * Math.PI) / 2); // 滑らかさ付与
-    return cfg.baseScale + (cfg.peakScale - cfg.baseScale) * eased;
 }
 
 // 選択タイルの4隅にL字ブラケットを描く。scaleでサイズを拡縮する（中心基準）
@@ -244,7 +36,7 @@ function drawCornerCursor(
     size: number,
     scale: number
 ): void {
-    const cfg = CORNER_CURSOR_CONFIG;
+    const cfg = CORNER_CURSOR_SETTINGS;
     const bracketLen = size * cfg.bracketLenRatio;
 
     // scale分だけ中心から拡縮させる
@@ -291,31 +83,6 @@ function drawCornerCursor(
     ctx.restore();
 }
 
-// ビューポートカリング: 現在表示範囲に含まれるマス番号の範囲を算出
-function getVisibleRange(view: ViewState, width: number, height: number, mapW: number, mapH: number): TileRange {
-    const { offsetX, offsetY, scale } = view;
-    const tileSize = MAP_CONFIG.tileSize * scale;
-    return {
-        colStart: Math.max(0, Math.floor(offsetX / tileSize) - MAP_CONFIG.marginTiles),
-        colEnd: Math.min(mapW - 1, Math.ceil((offsetX + width) / tileSize) + MAP_CONFIG.marginTiles),
-        rowStart: Math.max(0, Math.floor(offsetY / tileSize) - MAP_CONFIG.marginTiles),
-        rowEnd: Math.min(mapH - 1, Math.ceil((offsetY + height) / tileSize) + MAP_CONFIG.marginTiles),
-        tileSize,
-    };
-}
-
-// 画面に映っている列(x)・行(y)の範囲を算出（描画用の余剰マスは付けない）
-function getVisibleLabelRange(view: ViewState, width: number, height: number, mapW: number, mapH: number): LabelRange {
-    const { offsetX, offsetY, scale } = view;
-    const tileSize = MAP_CONFIG.tileSize * scale;
-    return {
-        colStart: Math.max(0, Math.floor(offsetX / tileSize)),
-        colEnd: Math.min(mapW - 1, Math.ceil((offsetX + width) / tileSize)),
-        rowStart: Math.max(0, Math.floor(offsetY / tileSize)),
-        rowEnd: Math.min(mapH - 1, Math.ceil((offsetY + height) / tileSize)),
-    };
-}
-
 // 影→縁取り→本体の順に重ねて文字を描く（影は同じ字形を右下へずらして暗い色で描く）
 function drawLabelText(
     ctx: CanvasRenderingContext2D,
@@ -353,7 +120,7 @@ function drawCoordLabels(
     mapH: number,
     selectedTile: { x: number; y: number } | null
 ): void {
-    const cfg = OVERLAY_LABEL_CONFIG;
+    const cfg = LABEL_SETTINGS;
     // 拡大に対しては指数カーブで緩やかに伸ばし、上下限で頭打ちにする
     const fontSize = Math.min(
         cfg.maxFontSize,
@@ -364,7 +131,7 @@ function drawCoordLabels(
     const { colStart, colEnd, rowStart, rowEnd } = getVisibleLabelRange(view, width, height, mapW, mapH);
 
     // tileToPixelはマス中心を返すため、半マス分戻してマップ端のスクリーン座標を得る
-    const tileSize = MAP_CONFIG.tileSize * view.scale;
+    const tileSize = MAP_VIEW_SETTINGS.tileSize * view.scale;
     const origin = tileToPixel(0, 0, view);
     const mapTopY = origin.py - tileSize / 2;
     const mapLeftX = origin.px - tileSize / 2;
@@ -415,7 +182,7 @@ function drawHoverHorizontalLines(
     colEnd: number
 ): void {
     const { py } = tileToPixel(0, hoverY, view);
-    const halfTile = (MAP_CONFIG.tileSize * view.scale) / 2;
+    const halfTile = (MAP_VIEW_SETTINGS.tileSize * view.scale) / 2;
     // 可視列の左端・右端のマス辺（奇数行は半マス右へずれるため、行ごとの中心xから求める）
     const leftX = tileToPixel(colStart, hoverY, view).px - halfTile;
     const rightX = tileToPixel(colEnd, hoverY, view).px + halfTile;
@@ -438,7 +205,7 @@ function drawHoverVerticalLines(
     rowStart: number,
     rowEnd: number
 ): void {
-    const halfTile = (MAP_CONFIG.tileSize * view.scale) / 2;
+    const halfTile = (MAP_VIEW_SETTINGS.tileSize * view.scale) / 2;
 
     ctx.beginPath();
     for (let y = rowStart; y <= rowEnd; y++) {
@@ -484,7 +251,7 @@ function drawHoverGuideLines(
 
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.strokeStyle = HOVER_GRID_CONFIG.lineColor;
+    ctx.strokeStyle = HOVER_GRID_SETTINGS.lineColor;
     ctx.lineWidth = calcHoverLineWidth(view.scale);
     drawHoverHorizontalLines(ctx, hoverY, view, colStart, colEnd);
     drawHoverVerticalLines(ctx, hoverX, view, rowStart, rowEnd);
@@ -510,10 +277,6 @@ function usePointerPanZoom(
         centerY: 0,
     });
 
-    function dist(p1: { x: number; y: number }, p2: { x: number; y: number }) {
-        return Math.hypot(p1.x - p2.x, p1.y - p2.y);
-    }
-
     const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
         if (!containerRef.current) return;
         const rect = containerRef.current.getBoundingClientRect();
@@ -528,7 +291,7 @@ function usePointerPanZoom(
             const [p1, p2] = Array.from(pointersRef.current.values());
             pinchRef.current = {
                 active: true,
-                startDist: dist(p1, p2),
+                startDist: distance(p1, p2),
                 startScale: viewRef.current.scale,
                 startOffsetX: viewRef.current.offsetX,
                 startOffsetY: viewRef.current.offsetY,
@@ -550,8 +313,8 @@ function usePointerPanZoom(
             isDraggingRef.current = true;
             const [p1, p2] = Array.from(pointersRef.current.values());
             const pinch = pinchRef.current;
-            let newScale = pinch.startScale * (dist(p1, p2) / pinch.startDist);
-            newScale = Math.min(MAP_CONFIG.maxScale, Math.max(MAP_CONFIG.minScale, newScale));
+            let newScale = pinch.startScale * (distance(p1, p2) / pinch.startDist);
+            newScale = Math.min(MAP_VIEW_SETTINGS.maxScale, Math.max(MAP_VIEW_SETTINGS.minScale, newScale));
             const mapAtCenterX = (pinch.centerX + pinch.startOffsetX) / pinch.startScale;
             const mapAtCenterY = (pinch.centerY + pinch.startOffsetY) / pinch.startScale;
             viewRef.current = {
@@ -593,21 +356,18 @@ function usePointerPanZoom(
             const rect = el.getBoundingClientRect();
             const cursorX = e.clientX - rect.left;
             const cursorY = e.clientY - rect.top;
-            const { offsetX, offsetY, scale } = viewRef.current;
+            const { scale } = viewRef.current;
 
             // 上回転(奥)で拡大、下回転(手前)で縮小
-            const zoomFactor = e.deltaY < 0 ? MAP_CONFIG.wheelZoomFactor : 1 / MAP_CONFIG.wheelZoomFactor;
-            const newScale = Math.min(MAP_CONFIG.maxScale, Math.max(MAP_CONFIG.minScale, scale * zoomFactor));
+            const zoomFactor = e.deltaY < 0 ? MAP_VIEW_SETTINGS.wheelZoomFactor : 1 / MAP_VIEW_SETTINGS.wheelZoomFactor;
+            const newScale = Math.min(
+                MAP_VIEW_SETTINGS.maxScale,
+                Math.max(MAP_VIEW_SETTINGS.minScale, scale * zoomFactor)
+            );
             if (newScale === scale) return;
 
             // カーソル位置を中心にズーム
-            const mapAtCursorX = (cursorX + offsetX) / scale;
-            const mapAtCursorY = (cursorY + offsetY) / scale;
-            viewRef.current = {
-                offsetX: mapAtCursorX * newScale - cursorX,
-                offsetY: mapAtCursorY * newScale - cursorY,
-                scale: newScale,
-            };
+            viewRef.current = zoomAroundPoint(viewRef.current, { x: cursorX, y: cursorY }, newScale);
             onChange();
         };
 
@@ -641,18 +401,18 @@ function CanvasMap() {
     // 初期スケールでマップ中央がcanvas中央に来るようoffsetを設定
     const initView = useCallback(
         (canvasW: number, canvasH: number) => {
-            const centerMapX = (map_width / 2) * MAP_CONFIG.tileSize + MAP_CONFIG.tileSize * 0.5;
-            const centerMapY = (map_height / 2) * MAP_CONFIG.tileSize + MAP_CONFIG.tileSize * 0.5;
+            const centerMapX = (map_width / 2) * MAP_VIEW_SETTINGS.tileSize + MAP_VIEW_SETTINGS.tileSize * 0.5;
+            const centerMapY = (map_height / 2) * MAP_VIEW_SETTINGS.tileSize + MAP_VIEW_SETTINGS.tileSize * 0.5;
             viewRef.current = {
-                offsetX: centerMapX * MAP_CONFIG.initialScale - canvasW / 2,
-                offsetY: centerMapY * MAP_CONFIG.initialScale - canvasH / 2,
-                scale: MAP_CONFIG.initialScale,
+                offsetX: centerMapX * MAP_VIEW_SETTINGS.initialScale - canvasW / 2,
+                offsetY: centerMapY * MAP_VIEW_SETTINGS.initialScale - canvasH / 2,
+                scale: MAP_VIEW_SETTINGS.initialScale,
             };
         },
         [map_width, map_height]
     );
 
-    const viewRef = useRef<ViewState>({ offsetX: 0, offsetY: 0, scale: MAP_CONFIG.initialScale });
+    const viewRef = useRef<ViewState>({ offsetX: 0, offsetY: 0, scale: MAP_VIEW_SETTINGS.initialScale });
 
     const render = useCallback(() => {
         const canvas = canvasRef.current;
@@ -663,7 +423,7 @@ function CanvasMap() {
         if (width <= 0 || height <= 0) return;
 
         ctx.clearRect(0, 0, width, height);
-        applyCanvasRenderOptions(ctx, MAP_CONFIG.renderOptions);
+        applyCanvasRenderOptions(ctx, MAP_VIEW_SETTINGS.renderOptions);
         const view = viewRef.current;
         const { colStart, colEnd, rowStart, rowEnd, tileSize } = getVisibleRange(
             view,
@@ -677,7 +437,7 @@ function CanvasMap() {
         const start = performance.now();
 
         // オプションに応じたタイル描画サイズを計算
-        const renderSize = calcTileRenderSize(tileSize, MAP_CONFIG.renderOptions);
+        const renderSize = calcTileRenderSize(tileSize, MAP_VIEW_SETTINGS.renderOptions);
 
         for (let y = rowStart; y <= rowEnd; y++) {
             for (let x = colStart; x <= colEnd; x++) {
@@ -694,9 +454,9 @@ function CanvasMap() {
                 if (img && img.complete && img.naturalWidth > 0) {
                     ctx.drawImage(img, drawX, drawY, renderSize, renderSize);
                 } else {
-                    ctx.fillStyle = MAP_CONFIG.colors.fallbackBg;
+                    ctx.fillStyle = MAP_VIEW_SETTINGS.colors.fallbackBg;
                     ctx.fillRect(drawX, drawY, renderSize, renderSize);
-                    ctx.strokeStyle = MAP_CONFIG.colors.fallbackBorder;
+                    ctx.strokeStyle = MAP_VIEW_SETTINGS.colors.fallbackBorder;
                     ctx.strokeRect(drawX, drawY, renderSize, renderSize);
                 }
                 count++;
@@ -725,7 +485,7 @@ function CanvasMap() {
         const hoverFadeAlpha = calcHoverFadeAlpha(
             hoverFadeStartRef.current,
             performance.now(),
-            HOVER_GRID_CONFIG.fadeDurationMs
+            HOVER_GRID_SETTINGS.fadeDurationMs
         );
         drawHoverGuideLines(
             ctx,
@@ -741,14 +501,14 @@ function CanvasMap() {
         // 選択カーソル（2秒周期のパルス付き角ブラケット）
         if (selectedTileRef.current) {
             const view = viewRef.current;
-            const tileSize = MAP_CONFIG.tileSize * view.scale;
-            const renderSize = calcTileRenderSize(tileSize, MAP_CONFIG.renderOptions);
+            const tileSize = MAP_VIEW_SETTINGS.tileSize * view.scale;
+            const renderSize = calcTileRenderSize(tileSize, MAP_VIEW_SETTINGS.renderOptions);
             const { x, y } = selectedTileRef.current;
             const { px, py } = tileToPixel(x, y, view);
             const drawX = px - tileSize / 2;
             const drawY = py - tileSize / 2;
             const elapsed = performance.now() - cursorAnimStartRef.current;
-            const scale = getPulseScale(elapsed, CORNER_CURSOR_CONFIG);
+            const scale = getPulseScale(elapsed, CORNER_CURSOR_SETTINGS);
             drawCornerCursor(ctx, drawX, drawY, renderSize, scale);
         }
 
@@ -795,7 +555,7 @@ function CanvasMap() {
 
         const loop = () => {
             // フェード完了時: alpha=0 で描き直してラインを完全に消してからループを止める
-            if (performance.now() - hoverFadeStartRef.current >= HOVER_GRID_CONFIG.fadeDurationMs) {
+            if (performance.now() - hoverFadeStartRef.current >= HOVER_GRID_SETTINGS.fadeDurationMs) {
                 hoverFadeFrameRef.current = 0;
                 renderOverlay();
                 return;
@@ -850,8 +610,8 @@ function CanvasMap() {
 
         const updateSize = () => {
             const rect = container.getBoundingClientRect();
-            const w = Math.min(MAP_CONFIG.maxViewportWidth, Math.max(1, Math.round(rect.width)));
-            const h = Math.min(MAP_CONFIG.maxViewportHeight, Math.max(1, Math.round(rect.height)));
+            const w = Math.min(MAP_VIEW_SETTINGS.maxViewportWidth, Math.max(1, Math.round(rect.width)));
+            const h = Math.min(MAP_VIEW_SETTINGS.maxViewportHeight, Math.max(1, Math.round(rect.height)));
 
             sizeRef.current = { width: w, height: h };
             setupCanvasForDpr(canvas, w, h);
@@ -932,9 +692,9 @@ function CanvasMap() {
                 style={{
                     position: 'relative',
                     width: '100%',
-                    maxWidth: `${MAP_CONFIG.maxViewportWidth}px`,
+                    maxWidth: `${MAP_VIEW_SETTINGS.maxViewportWidth}px`,
                     height: '100%',
-                    maxHeight: `${MAP_CONFIG.maxViewportHeight}px`,
+                    maxHeight: `${MAP_VIEW_SETTINGS.maxViewportHeight}px`,
                     touchAction: 'none',
                     overflow: 'hidden',
                     border: '1px solid #2a3a52',
