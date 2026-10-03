@@ -7,6 +7,7 @@ const MAP_HEIGHT = 12;
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
 const MARGIN_TILES = 2;
+const TILE_SIZE = 32;
 
 // マップ中央をcanvas中央に置いた初期表示相当のview
 const initialView: ViewState = { offsetX: -192, offsetY: -92, scale: 1 };
@@ -21,24 +22,24 @@ const views: Record<string, ViewState> = {
 
 describe('tileToPixel', () => {
     it('偶数行・奇数行・マップ端のマス中心座標を返す（実測値で固定）', () => {
-        expect(tileToPixel(3, 5, initialView)).toEqual({ px: 320, py: 268 });
-        expect(tileToPixel(0, 0, initialView)).toEqual({ px: 208, py: 108 });
-        expect(tileToPixel(11, 11, initialView)).toEqual({ px: 576, py: 460 });
-        expect(tileToPixel(1, 3, initialView)).toEqual({ px: 256, py: 204 });
-        expect(tileToPixel(2, 2, initialView)).toEqual({ px: 272, py: 172 });
+        expect(tileToPixel(3, 5, initialView, TILE_SIZE)).toEqual({ px: 320, py: 268 });
+        expect(tileToPixel(0, 0, initialView, TILE_SIZE)).toEqual({ px: 208, py: 108 });
+        expect(tileToPixel(11, 11, initialView, TILE_SIZE)).toEqual({ px: 576, py: 460 });
+        expect(tileToPixel(1, 3, initialView, TILE_SIZE)).toEqual({ px: 256, py: 204 });
+        expect(tileToPixel(2, 2, initialView, TILE_SIZE)).toEqual({ px: 272, py: 172 });
     });
 
     it('倍率とオフセットに応じた座標を返す（実測値で固定）', () => {
-        expect(tileToPixel(3, 5, zoomInView)).toEqual({ px: 421.5, py: 317.75 });
-        expect(tileToPixel(0, 0, zoomInView)).toEqual({ px: 85.5, py: -162.25 });
-        expect(tileToPixel(11, 11, zoomInView)).toEqual({ px: 1189.5, py: 893.75 });
-        expect(tileToPixel(1, 3, zoomInView)).toEqual({ px: 229.5, py: 125.75 });
-        expect(tileToPixel(2, 2, zoomInView)).toEqual({ px: 277.5, py: 29.75 });
-        expect(tileToPixel(3, 5, zoomOutView)).toEqual({ px: 51.5, py: 96.25 });
-        expect(tileToPixel(0, 0, zoomOutView)).toEqual({ px: -4.5, py: 16.25 });
-        expect(tileToPixel(11, 11, zoomOutView)).toEqual({ px: 179.5, py: 192.25 });
-        expect(tileToPixel(1, 3, zoomOutView)).toEqual({ px: 19.5, py: 64.25 });
-        expect(tileToPixel(2, 2, zoomOutView)).toEqual({ px: 27.5, py: 48.25 });
+        expect(tileToPixel(3, 5, zoomInView, TILE_SIZE)).toEqual({ px: 421.5, py: 317.75 });
+        expect(tileToPixel(0, 0, zoomInView, TILE_SIZE)).toEqual({ px: 85.5, py: -162.25 });
+        expect(tileToPixel(11, 11, zoomInView, TILE_SIZE)).toEqual({ px: 1189.5, py: 893.75 });
+        expect(tileToPixel(1, 3, zoomInView, TILE_SIZE)).toEqual({ px: 229.5, py: 125.75 });
+        expect(tileToPixel(2, 2, zoomInView, TILE_SIZE)).toEqual({ px: 277.5, py: 29.75 });
+        expect(tileToPixel(3, 5, zoomOutView, TILE_SIZE)).toEqual({ px: 51.5, py: 96.25 });
+        expect(tileToPixel(0, 0, zoomOutView, TILE_SIZE)).toEqual({ px: -4.5, py: 16.25 });
+        expect(tileToPixel(11, 11, zoomOutView, TILE_SIZE)).toEqual({ px: 179.5, py: 192.25 });
+        expect(tileToPixel(1, 3, zoomOutView, TILE_SIZE)).toEqual({ px: 19.5, py: 64.25 });
+        expect(tileToPixel(2, 2, zoomOutView, TILE_SIZE)).toEqual({ px: 27.5, py: 48.25 });
     });
 });
 
@@ -57,39 +58,54 @@ describe('tileToPixel → pixelToTile の往復', () => {
     for (const [viewName, view] of Object.entries(views)) {
         for (const [x, y] of coords) {
             it(`${viewName}: マス中心 (x=${x}, y=${y}) は同じマスへ戻る`, () => {
-                const { px, py } = tileToPixel(x, y, view);
+                const { px, py } = tileToPixel(x, y, view, TILE_SIZE);
 
-                expect(pixelToTile(px, py, view, MAP_WIDTH, MAP_HEIGHT)).toEqual({ x, y });
+                expect(pixelToTile(px, py, view, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE)).toEqual({ x, y });
             });
         }
     }
 });
 describe('pixelToTile', () => {
     it('マップ範囲外は null を返す', () => {
-        expect(pixelToTile(-1, 100, initialView, MAP_WIDTH, MAP_HEIGHT)).toBeNull();
-        expect(pixelToTile(100, -1, initialView, MAP_WIDTH, MAP_HEIGHT)).toBeNull();
-        expect(pixelToTile(100000, 100000, initialView, MAP_WIDTH, MAP_HEIGHT)).toBeNull();
-        expect(pixelToTile(100, 1000, initialView, MAP_WIDTH, MAP_HEIGHT)).toBeNull();
+        expect(pixelToTile(-1, 100, initialView, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE)).toBeNull();
+        expect(pixelToTile(100, -1, initialView, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE)).toBeNull();
+        expect(pixelToTile(100000, 100000, initialView, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE)).toBeNull();
+        expect(pixelToTile(100, 1000, initialView, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE)).toBeNull();
     });
 });
 
 describe('getVisibleRange', () => {
     it('可視範囲に marginTiles 分の余剰を加えた範囲を返す（実測値で固定）', () => {
-        expect(getVisibleRange(initialView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT)).toEqual({
+        expect(
+            getVisibleRange(initialView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT, {
+                tileSize: TILE_SIZE,
+                marginTiles: MARGIN_TILES,
+            })
+        ).toEqual({
             colStart: 0,
             colEnd: 11,
             rowStart: 0,
             rowEnd: 11,
             tileSize: 32,
         });
-        expect(getVisibleRange(zoomInView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT)).toEqual({
+        expect(
+            getVisibleRange(zoomInView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT, {
+                tileSize: TILE_SIZE,
+                marginTiles: MARGIN_TILES,
+            })
+        ).toEqual({
             colStart: 0,
             colEnd: 10,
             rowStart: 0,
             rowEnd: 11,
             tileSize: 96,
         });
-        expect(getVisibleRange(zoomOutView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT)).toEqual({
+        expect(
+            getVisibleRange(zoomOutView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT, {
+                tileSize: TILE_SIZE,
+                marginTiles: MARGIN_TILES,
+            })
+        ).toEqual({
             colStart: 0,
             colEnd: 11,
             rowStart: 0,
@@ -99,8 +115,18 @@ describe('getVisibleRange', () => {
     });
 
     it('余剰はマップ端でクランプされる', () => {
-        const range = getVisibleRange(zoomInView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT);
-        const labelRange = getVisibleLabelRange(zoomInView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT);
+        const range = getVisibleRange(zoomInView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT, {
+            tileSize: TILE_SIZE,
+            marginTiles: MARGIN_TILES,
+        });
+        const labelRange = getVisibleLabelRange(
+            zoomInView,
+            CANVAS_WIDTH,
+            CANVAS_HEIGHT,
+            MAP_WIDTH,
+            MAP_HEIGHT,
+            TILE_SIZE
+        );
 
         expect(range.colEnd).toBe(labelRange.colEnd + MARGIN_TILES);
         expect(range.rowStart).toBe(labelRange.rowStart - MARGIN_TILES);
@@ -109,19 +135,25 @@ describe('getVisibleRange', () => {
 
 describe('getVisibleLabelRange', () => {
     it('余剰マスを付けない可視範囲を返す（実測値で固定）', () => {
-        expect(getVisibleLabelRange(initialView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT)).toEqual({
+        expect(
+            getVisibleLabelRange(initialView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE)
+        ).toEqual({
             colStart: 0,
             colEnd: 11,
             rowStart: 0,
             rowEnd: 11,
         });
-        expect(getVisibleLabelRange(zoomInView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT)).toEqual({
-            colStart: 0,
-            colEnd: 8,
-            rowStart: 2,
-            rowEnd: 9,
-        });
-        expect(getVisibleLabelRange(zoomOutView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT)).toEqual({
+        expect(getVisibleLabelRange(zoomInView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE)).toEqual(
+            {
+                colStart: 0,
+                colEnd: 8,
+                rowStart: 2,
+                rowEnd: 9,
+            }
+        );
+        expect(
+            getVisibleLabelRange(zoomOutView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE)
+        ).toEqual({
             colStart: 0,
             colEnd: 11,
             rowStart: 0,

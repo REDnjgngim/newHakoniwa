@@ -3,19 +3,22 @@ import type { SectorTerrainData } from './types/terrain';
 import { TERRAIN_IMAGE_MAP } from './constants/terrain';
 import terrainDataJson from './mocks/sector_terrain.json';
 import { useHoverTracking, type HoverState } from './hooks/use-hover-tracking';
-import type { OverlayLabelConfig, ViewState } from './map/types';
+import type { ViewState } from './map/types';
 import { CORNER_CURSOR_SETTINGS, HOVER_GRID_SETTINGS, LABEL_SETTINGS, MAP_VIEW_SETTINGS } from './map/settings';
 import {
+    calcHoverFadeAlpha,
+    calcTileRenderSize,
     distance,
-    getVisibleLabelRange,
+    drawCoordLabels,
+    drawCornerCursor,
+    drawHoverGuideLines,
+    getPulseScale,
     getVisibleRange,
     pixelToTile,
     tileToPixel,
     zoomAroundPoint,
-} from './map/geometry';
-import { applyCanvasRenderOptions, calcTileRenderSize, setupCanvasForDpr } from './map/canvas';
-import { calcHoverFadeAlpha, calcHoverLineWidth } from './map/render/hover-grid';
-import { getPulseScale } from './map/render/corner-cursor';
+} from './map';
+import { applyCanvasRenderOptions, setupCanvasForDpr } from './map/canvas';
 
 // JSON型をSectorTerrainDataとして扱う
 const sectorData = terrainDataJson as SectorTerrainData;
@@ -26,236 +29,6 @@ export default function HexMapPreview() {
             <CanvasMap />
         </div>
     );
-}
-
-// 選択タイルの4隅にL字ブラケットを描く。scaleでサイズを拡縮する（中心基準）
-function drawCornerCursor(
-    ctx: CanvasRenderingContext2D,
-    drawX: number,
-    drawY: number,
-    size: number,
-    scale: number
-): void {
-    const cfg = CORNER_CURSOR_SETTINGS;
-    const bracketLen = size * cfg.bracketLenRatio;
-
-    // scale分だけ中心から拡縮させる
-    const cx = drawX + size / 2;
-    const cy = drawY + size / 2;
-    const half = (size * scale) / 2;
-    const x0 = cx - half;
-    const y0 = cy - half;
-    const x1 = cx + half;
-    const y1 = cy + half;
-
-    ctx.save();
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    // 4隅のブラケットを1本のパスとして組み立て、縁取りと本体で使い回す
-    ctx.beginPath();
-    // 左上
-    ctx.moveTo(x0, y0 + bracketLen);
-    ctx.lineTo(x0, y0);
-    ctx.lineTo(x0 + bracketLen, y0);
-    // 右上
-    ctx.moveTo(x1 - bracketLen, y0);
-    ctx.lineTo(x1, y0);
-    ctx.lineTo(x1, y0 + bracketLen);
-    // 右下
-    ctx.moveTo(x1, y1 - bracketLen);
-    ctx.lineTo(x1, y1);
-    ctx.lineTo(x1 - bracketLen, y1);
-    // 左下
-    ctx.moveTo(x0 + bracketLen, y1);
-    ctx.lineTo(x0, y1);
-    ctx.lineTo(x0, y1 - bracketLen);
-
-    // 太めの水色を下地に描き、その上へ本体色を重ねて細い縁取りを出す
-    ctx.lineWidth = cfg.outlineWidth;
-    ctx.strokeStyle = cfg.outlineColor;
-    ctx.stroke();
-
-    ctx.lineWidth = cfg.lineWidth;
-    ctx.strokeStyle = cfg.color;
-    ctx.stroke();
-
-    ctx.restore();
-}
-
-// 影→縁取り→本体の順に重ねて文字を描く（影は同じ字形を右下へずらして暗い色で描く）
-function drawLabelText(
-    ctx: CanvasRenderingContext2D,
-    label: string,
-    x: number,
-    y: number,
-    shadowOffset: number,
-    cfg: OverlayLabelConfig
-): void {
-    // 影：ずらし量が潰しの影響を受けないよう画面座標側で移動する
-    ctx.save();
-    ctx.translate(x + shadowOffset, y + shadowOffset);
-    ctx.scale(1, cfg.glyphScaleY);
-    ctx.fillStyle = cfg.shadowColor;
-    ctx.fillText(label, 0, 0);
-    ctx.restore();
-
-    // 本体：アンカー位置で文字の高さのみ縮めて縁取りと本体を重ねる
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(1, cfg.glyphScaleY);
-    ctx.strokeText(label, 0, 0); // 縁取り
-    ctx.fillText(label, 0, 0); // 本体
-    ctx.restore();
-}
-
-// マップの上端・左端に座標ラベルを描画（マップ端が画面外に出た軸は画面端に留める）
-// selectedTile に指定された列・行のラベルは強調色で描画する（ホバーでは変えない）
-function drawCoordLabels(
-    ctx: CanvasRenderingContext2D,
-    view: ViewState,
-    width: number,
-    height: number,
-    mapW: number,
-    mapH: number,
-    selectedTile: { x: number; y: number } | null
-): void {
-    const cfg = LABEL_SETTINGS;
-    // 拡大に対しては指数カーブで緩やかに伸ばし、上下限で頭打ちにする
-    const fontSize = Math.min(
-        cfg.maxFontSize,
-        Math.max(cfg.minFontSize, cfg.baseFontSize * Math.pow(view.scale, cfg.fontScaleExponent))
-    );
-    // 影のずらし量は文字サイズに比例させ、縮小時に影だけ離れて見えないようにする
-    const shadowOffset = fontSize * cfg.shadowOffsetRatio;
-    const { colStart, colEnd, rowStart, rowEnd } = getVisibleLabelRange(view, width, height, mapW, mapH);
-
-    // tileToPixelはマス中心を返すため、半マス分戻してマップ端のスクリーン座標を得る
-    const tileSize = MAP_VIEW_SETTINGS.tileSize * view.scale;
-    const origin = tileToPixel(0, 0, view);
-    const mapTopY = origin.py - tileSize / 2;
-    const mapLeftX = origin.px - tileSize / 2;
-    // クランプ時も文字が画面外へ出ないよう、縦を縮めた後の文字高で余白を取る
-    const columnLabelY = Math.max(cfg.edgeInsetPx + fontSize * cfg.glyphScaleY, mapTopY - cfg.edgeInsetPx);
-    // 列は奇数行が半マス右へずれてジグザグに並ぶため、偶数行と奇数行の中心の中間（右へ1/4マス）に置く
-    const columnLabelOffsetX = tileSize / 4;
-
-    ctx.save();
-    ctx.font = `${fontSize}px ${cfg.fontFamily}`;
-    ctx.fillStyle = cfg.color;
-    ctx.lineWidth = cfg.haloWidth;
-    ctx.strokeStyle = cfg.haloColor;
-
-    // 上端：列ラベル（y=0行の中心基準。奇数行の半マスずれの影響を受けないようにする）
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    for (let x = colStart; x <= colEnd; x++) {
-        const { px } = tileToPixel(x, 0, view);
-        // 選択中の列番号だけ強調色にする
-        ctx.fillStyle = selectedTile?.x === x ? cfg.highlightColor : cfg.color;
-        drawLabelText(ctx, String(x), px + columnLabelOffsetX, columnLabelY, shadowOffset, cfg);
-    }
-
-    // 左端：行ラベル（x=0列の中心基準。縦は常に直線なのでズレない）
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    for (let y = rowStart; y <= rowEnd; y++) {
-        const { py } = tileToPixel(0, y, view);
-        const label = String(y);
-        const labelWidth = ctx.measureText(label).width;
-        const rowLabelX = Math.max(cfg.edgeInsetPx + labelWidth, mapLeftX - cfg.edgeInsetPx);
-        // 選択中の行番号だけ強調色にする
-        ctx.fillStyle = selectedTile?.y === y ? cfg.highlightColor : cfg.color;
-        drawLabelText(ctx, label, rowLabelX, py, shadowOffset, cfg);
-    }
-
-    ctx.restore();
-}
-
-// ホバー中のマスの行の上辺・下辺を、可視列の範囲（マップの左右端まで）に描画
-// 行の上下端はその行のどのマスでも同じy（半マスずれは横方向のみ）なので、常に一直線の2本になる
-function drawHoverHorizontalLines(
-    ctx: CanvasRenderingContext2D,
-    hoverY: number,
-    view: ViewState,
-    colStart: number,
-    colEnd: number
-): void {
-    const { py } = tileToPixel(0, hoverY, view);
-    const halfTile = (MAP_VIEW_SETTINGS.tileSize * view.scale) / 2;
-    // 可視列の左端・右端のマス辺（奇数行は半マス右へずれるため、行ごとの中心xから求める）
-    const leftX = tileToPixel(colStart, hoverY, view).px - halfTile;
-    const rightX = tileToPixel(colEnd, hoverY, view).px + halfTile;
-
-    ctx.beginPath();
-    ctx.moveTo(leftX, py - halfTile);
-    ctx.lineTo(rightX, py - halfTile);
-    ctx.moveTo(leftX, py + halfTile);
-    ctx.lineTo(rightX, py + halfTile);
-    ctx.stroke();
-}
-
-// ホバー中のマスの左辺・右辺（縦線2本）を描画
-// 奇数行は半マス右へずれるため、行ごとに「タイル中心±半マス」へ縦線分を描き、
-// 行の境界ではずれ幅（半マス）を横線でつないで階段状の連続した輪郭にする
-function drawHoverVerticalLines(
-    ctx: CanvasRenderingContext2D,
-    hoverX: number,
-    view: ViewState,
-    rowStart: number,
-    rowEnd: number
-): void {
-    const halfTile = (MAP_VIEW_SETTINGS.tileSize * view.scale) / 2;
-
-    ctx.beginPath();
-    for (let y = rowStart; y <= rowEnd; y++) {
-        const { px, py } = tileToPixel(hoverX, y, view);
-
-        // 左辺・右辺（この行の高さいっぱい）
-        ctx.moveTo(px - halfTile, py - halfTile);
-        ctx.lineTo(px - halfTile, py + halfTile);
-        ctx.moveTo(px + halfTile, py - halfTile);
-        ctx.lineTo(px + halfTile, py + halfTile);
-
-        // 次の行との境界（y = py + halfTile）に、半マスずれた分をつなぐ横線を引く
-        if (y < rowEnd) {
-            const next = tileToPixel(hoverX, y + 1, view);
-            const boundaryY = py + halfTile;
-            ctx.moveTo(px - halfTile, boundaryY);
-            ctx.lineTo(next.px - halfTile, boundaryY);
-            ctx.moveTo(px + halfTile, boundaryY);
-            ctx.lineTo(next.px + halfTile, boundaryY);
-        }
-    }
-    ctx.stroke();
-}
-
-// ホバー中のマスの上下・左右の辺をガイドラインとして描画
-// ホバーしていないとき・フェードアウトしきったとき（alpha <= 0）は何も描かない
-function drawHoverGuideLines(
-    ctx: CanvasRenderingContext2D,
-    hover: HoverState,
-    view: ViewState,
-    width: number,
-    height: number,
-    mapW: number,
-    mapH: number,
-    alpha: number
-): void {
-    const hoverX = hover.x;
-    const hoverY = hover.y;
-    if (hoverX === null || hoverY === null || alpha <= 0) return;
-
-    // 描画範囲は可視範囲に絞る（縦線は行、横線は列。マップ全体を舐めないようにする）
-    const { colStart, colEnd, rowStart, rowEnd } = getVisibleLabelRange(view, width, height, mapW, mapH);
-
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = HOVER_GRID_SETTINGS.lineColor;
-    ctx.lineWidth = calcHoverLineWidth(view.scale);
-    drawHoverHorizontalLines(ctx, hoverY, view, colStart, colEnd);
-    drawHoverVerticalLines(ctx, hoverX, view, rowStart, rowEnd);
-    ctx.restore();
 }
 
 // ドラッグ・ピンチ・ホイールによるパン/ズーム操作フック
@@ -430,7 +203,8 @@ function CanvasMap() {
             width,
             height,
             map_width,
-            map_height
+            map_height,
+            { tileSize: MAP_VIEW_SETTINGS.tileSize, marginTiles: MAP_VIEW_SETTINGS.marginTiles }
         );
 
         let count = 0;
@@ -444,7 +218,7 @@ function CanvasMap() {
                 const cell = terrain_grid[y]?.[x];
                 if (!cell) continue;
 
-                const { px, py } = tileToPixel(x, y, view);
+                const { px, py } = tileToPixel(x, y, view, MAP_VIEW_SETTINGS.tileSize);
                 const drawX = px - tileSize / 2;
                 const drawY = py - tileSize / 2;
 
@@ -495,7 +269,9 @@ function CanvasMap() {
             height,
             map_width,
             map_height,
-            hoverFadeAlpha
+            hoverFadeAlpha,
+            HOVER_GRID_SETTINGS,
+            MAP_VIEW_SETTINGS.tileSize
         );
 
         // 選択カーソル（2秒周期のパルス付き角ブラケット）
@@ -504,16 +280,26 @@ function CanvasMap() {
             const tileSize = MAP_VIEW_SETTINGS.tileSize * view.scale;
             const renderSize = calcTileRenderSize(tileSize, MAP_VIEW_SETTINGS.renderOptions);
             const { x, y } = selectedTileRef.current;
-            const { px, py } = tileToPixel(x, y, view);
+            const { px, py } = tileToPixel(x, y, view, MAP_VIEW_SETTINGS.tileSize);
             const drawX = px - tileSize / 2;
             const drawY = py - tileSize / 2;
             const elapsed = performance.now() - cursorAnimStartRef.current;
             const scale = getPulseScale(elapsed, CORNER_CURSOR_SETTINGS);
-            drawCornerCursor(ctx, drawX, drawY, renderSize, scale);
+            drawCornerCursor(ctx, drawX, drawY, renderSize, scale, CORNER_CURSOR_SETTINGS);
         }
 
         // 座標ラベル（マップの上端・左端に追従。選択中の列・行は強調）
-        drawCoordLabels(ctx, viewRef.current, width, height, map_width, map_height, selectedTileRef.current);
+        drawCoordLabels(
+            ctx,
+            viewRef.current,
+            width,
+            height,
+            map_width,
+            map_height,
+            MAP_VIEW_SETTINGS.tileSize,
+            selectedTileRef.current,
+            LABEL_SETTINGS
+        );
     }, [map_width, map_height]);
 
     // パン・ズーム・リサイズ時に両レイヤーを再描画する
@@ -582,7 +368,8 @@ function CanvasMap() {
 
     // ポインター位置→マス座標の変換（viewはref経由で常に最新の表示状態を参照する）
     const resolveHoverCell = useCallback(
-        (localX: number, localY: number) => pixelToTile(localX, localY, viewRef.current, map_width, map_height),
+        (localX: number, localY: number) =>
+            pixelToTile(localX, localY, viewRef.current, map_width, map_height, MAP_VIEW_SETTINGS.tileSize),
         [map_width, map_height]
     );
 
