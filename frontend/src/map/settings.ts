@@ -1,4 +1,15 @@
-import type { CornerCursorConfig, HoverGridConfig, MapConfig, OverlayLabelConfig } from './types';
+import type {
+    CornerCursorConfig,
+    HexMapPreviewProps,
+    HoverGridConfig,
+    MapConfig,
+    MapSettingsInput,
+    OverlayLabelConfig,
+    ResolvedMapSettings,
+    TerrainImageMap,
+} from './types';
+import { TERRAIN_IMAGE_MAP } from '../constants/terrain';
+import { clamp } from './geometry';
 
 // マップ表示の基本設定値
 export const MAP_VIEW_SETTINGS: MapConfig = {
@@ -7,12 +18,15 @@ export const MAP_VIEW_SETTINGS: MapConfig = {
     minScale: 0.5, // 最小表示倍率
     maxScale: 10, // 最大表示倍率
     wheelZoomFactor: 1.15, // マウスホイールでのズーム倍率
+    dragThresholdPx: 4, // ドラッグとクリックを判定する移動距離の閾値(px)
     marginTiles: 2, // 表示領域端から読み込むマスの余剰数
     maxViewportWidth: 3940, // 最大ビューポート幅
     maxViewportHeight: 2160, // 最大ビューポート高さ
-    colors: {
-        fallbackBg: '#18324f', // 背景色
-        fallbackBorder: '#2e5b88', // ボーダー色
+    theme: {
+        background: '#0e1a2b', // マップ領域の背景色
+        border: '#2a3a52', // マップ領域の枠線色
+        fallbackBg: '#18324f', // 地形画像が未ロードのときの背景色
+        fallbackBorder: '#2e5b88', // 地形画像が未ロードのときの枠線色
     },
     renderOptions: {
         imageSmoothing: false, // 画像の平滑化（falseでドット絵をくっきり表示）
@@ -56,3 +70,30 @@ export const CORNER_CURSOR_SETTINGS: CornerCursorConfig = {
     baseScale: 1.0, // 通常時のサイズ倍率
     peakScale: 1.1, // パルス時のピークサイズ倍率
 };
+
+// 注入された部分設定を既定値とマージし、描画側が参照する設定一式を解決する
+// （汎用のdeep mergeは型安全性が落ちるため、階層ごとに明示してマージする）
+export function resolveMapSettings(props: HexMapPreviewProps): ResolvedMapSettings {
+    const input: MapSettingsInput | undefined = props.settings;
+    const defaults = MAP_VIEW_SETTINGS;
+
+    const view: MapConfig = {
+        ...defaults,
+        ...input?.view,
+        // theme / renderOptions はオブジェクト型のため、部分上書きを許して階層ごとにマージする
+        theme: { ...defaults.theme, ...input?.view?.theme },
+        renderOptions: { ...defaults.renderOptions, ...input?.view?.renderOptions },
+    };
+    // 注入値の組み合わせで初期倍率が範囲外になっても、必ず上下限内に収める
+    view.initialScale = clamp(view.initialScale, view.minScale, view.maxScale);
+
+    const images: TerrainImageMap = { ...TERRAIN_IMAGE_MAP, ...props.terrainImages };
+
+    return {
+        view,
+        label: { ...LABEL_SETTINGS, ...input?.label },
+        hoverGrid: { ...HOVER_GRID_SETTINGS, ...input?.hoverGrid },
+        cornerCursor: { ...CORNER_CURSOR_SETTINGS, ...input?.cornerCursor },
+        images,
+    };
+}

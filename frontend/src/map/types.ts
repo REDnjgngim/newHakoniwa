@@ -1,3 +1,6 @@
+import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
+import type { SectorTerrainData, TerrainCell, TerrainType } from '../types/terrain';
+
 // マップ表示・描画設定の型定義
 export interface MapRenderOptions {
     /** 画像のスムージング（falseでドット絵をくっきり表示） */
@@ -6,19 +9,26 @@ export interface MapRenderOptions {
     overlapPx: number;
 }
 
+// マップ領域の配色（背景・枠線・地形画像が未ロードのときの代替配色）
+export interface MapTheme {
+    background: string;
+    border: string;
+    fallbackBg: string;
+    fallbackBorder: string;
+}
+
 export interface MapConfig {
     tileSize: number;
     initialScale: number;
     minScale: number;
     maxScale: number;
     wheelZoomFactor: number;
+    /** ドラッグとクリックを判定する移動距離の閾値（px） */
+    dragThresholdPx: number;
     marginTiles: number;
     maxViewportWidth: number;
     maxViewportHeight: number;
-    colors: {
-        fallbackBg: string;
-        fallbackBorder: string;
-    };
+    theme: MapTheme;
     renderOptions: MapRenderOptions;
 }
 
@@ -88,4 +98,106 @@ export interface LabelRange {
     colEnd: number;
     rowStart: number;
     rowEnd: number;
+}
+
+// ============================================================================
+// 公開API（呼び出し側が注入するデータ・通知）
+// ============================================================================
+
+// 選択確定の通知内容（座標とセル情報の両方を渡す）
+export interface MapSelection {
+    coord: TileCoord;
+    cell: TerrainCell;
+}
+
+export type OnSelectTile = (selection: MapSelection) => void;
+
+// 地形画像マップ（呼び出し側が注入する。全キー必須ではない）
+export type TerrainImageMap = Partial<Record<TerrainType, string>>;
+
+// エントリコンポーネントのprops（外部から差し替え可能な入力）
+export interface HexMapPreviewProps {
+    sector: SectorTerrainData;
+    settings?: MapSettingsInput;
+    terrainImages?: TerrainImageMap;
+    onSelect?: OnSelectTile;
+}
+
+// ============================================================================
+// 設定の部分上書きと、既定値で解決した後の設定
+// ============================================================================
+
+export type DeepPartial<T> = { [Key in keyof T]?: T[Key] extends object ? DeepPartial<T[Key]> : T[Key] };
+
+export interface MapSettingsInput {
+    view?: DeepPartial<MapConfig>;
+    label?: Partial<OverlayLabelConfig>;
+    hoverGrid?: Partial<HoverGridConfig>;
+    cornerCursor?: Partial<CornerCursorConfig>;
+}
+
+// 既定値と注入値をマージし終えた設定（描画側はこれだけを参照する）
+export interface ResolvedMapSettings {
+    view: MapConfig;
+    label: OverlayLabelConfig;
+    hoverGrid: HoverGridConfig;
+    cornerCursor: CornerCursorConfig;
+    images: TerrainImageMap;
+}
+
+// ============================================================================
+// フックの入出力型
+// ============================================================================
+
+// ホバー対象のセル座標（マス座標の別名）
+export type HoverCell = TileCoord;
+
+// ホバー中の状態。未ホバー時は x / y に null が入る
+export interface HoverState {
+    x: number | null;
+    y: number | null;
+}
+
+// ポインターイベントの要素内ローカル座標（CSS px）
+export interface PointerLocalPosition {
+    x: number;
+    y: number;
+}
+
+export interface HoverTrackingResult<E extends HTMLElement> {
+    // ホバー状態を設定する（同一セルなら再描画しない）
+    setHover: (next: HoverState) => void;
+    // ホバーを解除する
+    clearHover: () => void;
+    // 指定セルがホバー中かどうか
+    isHoveredCell: (cell: HoverCell | null) => boolean;
+    // イベント位置をセル座標へ変換する（範囲外は null）
+    resolveEventCell: (event: ReactPointerEvent<E>) => HoverCell | null;
+    // pointermove 用: ホバー位置をポインターに追従させる（タッチでは何もしない）
+    handlePointerMoveForHover: (event: ReactPointerEvent<E>) => void;
+    // pointerleave 用: ホバーを解除する（タッチでは解除しない）
+    handlePointerLeaveForHover: (event?: ReactPointerEvent<E>) => void;
+    // pointerup 用: ホバー中と同一セルなら onConfirm、別セルならホバー移動のみ
+    handleTapForHover: (event: ReactPointerEvent<E>, onConfirm: (cell: HoverCell) => void) => void;
+}
+
+export interface PointerPanZoomResult<E extends HTMLElement> {
+    handlePointerDown: (event: ReactPointerEvent<E>) => void;
+    handlePointerMove: (event: ReactPointerEvent<E>) => void;
+    handlePointerUp: (event: ReactPointerEvent<E>) => void;
+    isDraggingRef: RefObject<boolean>;
+}
+
+// ピンチ開始時の表示状態と2本指の中心（開始時を基準に計算する）
+export interface PinchState {
+    view: ViewState;
+    startDist: number;
+    centerX: number;
+    centerY: number;
+}
+
+export interface AnimationLoopController {
+    start: () => void;
+    stop: () => void;
+    isRunning: () => boolean;
 }
