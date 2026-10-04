@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 import type { TerrainImageMap } from '../types';
 
 // ============================================================================
@@ -8,10 +8,10 @@ import type { TerrainImageMap } from '../types';
 
 export function useTerrainImages(images: TerrainImageMap, onLoaded: () => void): ReadonlyMap<string, HTMLImageElement> {
     const storeRef = useRef<Map<string, HTMLImageElement>>(new Map());
-    const onLoadedRef = useRef(onLoaded);
 
-    useEffect(() => {
-        onLoadedRef.current = onLoaded;
+    // 読み込み完了はイベントとして通知する（依存配列に含めず最新のコールバックを呼ぶ）
+    const handleLoaded = useEffectEvent(() => {
+        onLoaded();
     });
 
     useEffect(() => {
@@ -22,7 +22,7 @@ export function useTerrainImages(images: TerrainImageMap, onLoaded: () => void):
             if (!src || store.has(src)) continue;
 
             const img = new Image();
-            img.onload = () => onLoadedRef.current();
+            img.onload = handleLoaded;
             img.src = src;
             store.set(src, img);
             created.push([src, img]);

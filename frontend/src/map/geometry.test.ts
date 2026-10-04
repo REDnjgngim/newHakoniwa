@@ -1,4 +1,12 @@
-import { distance, getVisibleLabelRange, getVisibleRange, pixelToTile, tileToPixel, zoomAroundPoint } from './geometry';
+import {
+    clamp,
+    distance,
+    getVisibleLabelRange,
+    getVisibleRange,
+    pixelToTile,
+    tileToPixel,
+    zoomAroundPoint,
+} from './geometry';
 import type { ViewState } from './types';
 
 // 実測に使用した条件（12x12マップ・tileSize=32・canvas 800x600 を想定）
@@ -218,5 +226,71 @@ describe('zoomAroundPoint', () => {
 describe('distance', () => {
     it('2点間の距離を返す', () => {
         expect(distance({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(5);
+    });
+});
+
+describe('ズーム中心計算の統合', () => {
+    // ピンチ経路は「開始時view」を、ホイール経路は「現在view」を基準にする（どちらもzoomAroundPointを通る）
+    const ZOOM_CENTER = { x: 400, y: 300 }; // ピンチの指中心 / ホイールのカーソル位置
+    const PINCH_START_DIST = 200; // ピンチ開始時の2本指の距離(px)
+    const WHEEL_ZOOM_FACTOR = 1.15; // ホイール1回あたりのズーム倍率
+
+    it('同じ基準view・中心・newScaleなら、ピンチ相当とホイール相当は同じ表示状態を返す（実測値で固定）', () => {
+        // ピンチ相当（開始時viewを基準）
+        const pinchResult = zoomAroundPoint(initialView, ZOOM_CENTER, 1.5);
+        // ホイール相当（現在viewを基準。開始時点では現在view = 開始時view）
+        const wheelResult = zoomAroundPoint(initialView, ZOOM_CENTER, 1.5);
+
+        expect(pinchResult).toEqual({ offsetX: -88, offsetY: 12, scale: 1.5 });
+        expect(wheelResult).toEqual(pinchResult);
+    });
+
+    it('ピンチは開始時viewを基準に中心のマップ座標を固定する（実測値で固定）', () => {
+        const cases = [
+            { dist: 200, newScale: 1, view: { offsetX: -192, offsetY: -92, scale: 1 } },
+            { dist: 220, newScale: 1.1, view: { offsetX: -171.2, offsetY: -71.19999999999999, scale: 1.1 } },
+            {
+                dist: 260,
+                newScale: 1.3,
+                view: { offsetX: -129.59999999999997, offsetY: -29.599999999999966, scale: 1.3 },
+            },
+            {
+                dist: 340,
+                newScale: 1.7,
+                view: { offsetX: -46.400000000000034, offsetY: 53.599999999999966, scale: 1.7 },
+            },
+        ];
+
+        for (const { dist, newScale, view } of cases) {
+            // ピンチ中の倍率は「開始時の倍率 × 距離の比」を上下限へ収めたもの
+            const scale = clamp(initialView.scale * (dist / PINCH_START_DIST), 0.5, 10);
+            expect(scale).toBe(newScale);
+
+            const result = zoomAroundPoint(initialView, ZOOM_CENTER, scale);
+            expect(result).toEqual(view);
+            // 指の中心が指し示すマップ座標はピンチ開始時から動かない
+            expect((ZOOM_CENTER.x + result.offsetX) / result.scale).toBeCloseTo(208, 6);
+            expect((ZOOM_CENTER.y + result.offsetY) / result.scale).toBeCloseTo(208, 6);
+        }
+    });
+
+    it('ホイールは現在viewを基準に中心のマップ座標を固定する（実測値で固定）', () => {
+        const expectedViews = [
+            { offsetX: -160.8, offsetY: -60.80000000000001, scale: 1.15 },
+            { offsetX: -124.92000000000007, offsetY: -24.920000000000073, scale: 1.3224999999999998 },
+            { offsetX: -83.65800000000013, offsetY: 16.34199999999987, scale: 1.5208749999999995 },
+        ];
+
+        let view: ViewState = initialView;
+        for (const expected of expectedViews) {
+            // ホイール1回ごとに「現在の倍率 × ズーム倍率」を上下限へ収める
+            const scale = clamp(view.scale * WHEEL_ZOOM_FACTOR, 0.5, 10);
+            view = zoomAroundPoint(view, ZOOM_CENTER, scale);
+
+            expect(view).toEqual(expected);
+            // カーソルが指し示すマップ座標は連続ズームでも動かない
+            expect((ZOOM_CENTER.x + view.offsetX) / view.scale).toBeCloseTo(208, 6);
+            expect((ZOOM_CENTER.y + view.offsetY) / view.scale).toBeCloseTo(208, 6);
+        }
     });
 });

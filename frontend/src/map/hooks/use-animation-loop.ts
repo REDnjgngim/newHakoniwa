@@ -8,6 +8,7 @@ import type { AnimationLoopController } from '../types';
 
 export function useAnimationLoop(onFrame: (nowMs: number) => void): AnimationLoopController {
     const frameRef = useRef<number | null>(null);
+    // rAFのコールバックはEffect外から呼ばれるため、useEffectEventではなくrefで最新化する
     const callbackRef = useRef(onFrame);
 
     // ループ実行中に最新のコールバックを参照できるよう、毎レンダリング後に差し替える

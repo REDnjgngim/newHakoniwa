@@ -37,7 +37,7 @@ export function usePointerPanZoom<E extends HTMLElement>(
             isDraggingRef.current = false;
         } else if (pointersRef.current.size === 2) {
             isDraggingRef.current = true;
-            const [p1, p2] = Array.from(pointersRef.current.values());
+            const [p1, p2] = [...pointersRef.current.values()];
             pinchRef.current = {
                 view: { ...viewRef.current },
                 startDist: distance(p1, p2),
@@ -62,7 +62,7 @@ export function usePointerPanZoom<E extends HTMLElement>(
 
         if (pointersRef.current.size === 2 && pinch) {
             isDraggingRef.current = true;
-            const [p1, p2] = Array.from(pointersRef.current.values());
+            const [p1, p2] = [...pointersRef.current.values()];
             const newScale = clamp(
                 pinch.view.scale * (distance(p1, p2) / pinch.startDist),
                 settings.minScale,

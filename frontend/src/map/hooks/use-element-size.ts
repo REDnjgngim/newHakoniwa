@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useEffectEvent, useRef, type RefObject } from 'react';
 import { clamp } from '../geometry';
 
 // ============================================================================
@@ -22,12 +22,11 @@ export function useElementSize<E extends HTMLElement>(
     limits: ElementSizeLimits,
     onResize: (size: ElementSize) => void
 ): void {
-    const callbackRef = useRef(onResize);
     const isFirstRef = useRef(true);
 
-    // 再購読せずに最新のコールバックを呼べるようにする
-    useEffect(() => {
-        callbackRef.current = onResize;
+    // 計測結果はイベントとして通知する（依存配列に含めず最新のコールバックを呼ぶ）
+    const handleResize = useEffectEvent((size: ElementSize) => {
+        onResize(size);
     });
 
     useEffect(() => {
@@ -38,7 +37,7 @@ export function useElementSize<E extends HTMLElement>(
             const rect = el.getBoundingClientRect();
             const width = clamp(Math.round(rect.width), 1, limits.maxWidth);
             const height = clamp(Math.round(rect.height), 1, limits.maxHeight);
-            callbackRef.current({ width, height, isFirst: isFirstRef.current });
+            handleResize({ width, height, isFirst: isFirstRef.current });
             isFirstRef.current = false;
         };
 

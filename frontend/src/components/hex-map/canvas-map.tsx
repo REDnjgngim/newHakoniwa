@@ -34,11 +34,11 @@ export interface CanvasMapProps {
 }
 
 function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
-    const canvasRef = useRef<HTMLCanvasElement | null>(null);
-    const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
-    const containerRef = useRef<HTMLDivElement | null>(null);
-    const statsRef = useRef<HTMLDivElement | null>(null);
-    const selectedHudRef = useRef<HTMLDivElement | null>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const statsRef = useRef<HTMLDivElement>(null);
+    const selectedHudRef = useRef<HTMLDivElement>(null);
     const sizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
     const selectedTileRef = useRef<{ x: number; y: number } | null>(null);
     const hoverStateRef = useRef<HoverState>({ x: null, y: null });
@@ -194,7 +194,7 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
     }, [render, renderOverlay]);
 
     // 選択演出のパルス: 選択が外れたらループを止める
-    const cursorLoopRef = useRef<AnimationLoopController | null>(null);
+    const cursorLoopRef = useRef<AnimationLoopController>(null);
     const cursorLoop = useAnimationLoop(
         useCallback(() => {
             if (!selectedTileRef.current) {
@@ -209,7 +209,7 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
     }, [cursorLoop]);
 
     // ホバーのフェード: フェード完了時に最後の描画をしてからループを止める
-    const hoverFadeLoopRef = useRef<AnimationLoopController | null>(null);
+    const hoverFadeLoopRef = useRef<AnimationLoopController>(null);
     const hoverFadeLoop = useAnimationLoop(
         useCallback(
             (nowMs: number) => {
