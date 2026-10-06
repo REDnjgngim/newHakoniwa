@@ -1,25 +1,17 @@
-import { useCallback, useEffect, useRef, type PointerEvent } from 'react';
+import { useCallback, useRef, type PointerEvent } from 'react';
 import type { SectorTerrainData } from '../../types/terrain';
 import {
-    applyCanvasRenderOptions,
-    calcHoverFadeAlpha,
-    calcTileRenderSize,
-    drawCoordLabels,
-    drawCornerCursor,
-    drawHoverGuideLines,
-    getPulseScale,
-    getVisibleRange,
     pixelToTile,
     setupCanvasForDpr,
-    tileToPixel,
-    useAnimationLoop,
     useElementSize,
     useHoverTracking,
+    useMapAnimations,
+    useMapRenderer,
     usePointerPanZoom,
-    useTerrainImages,
+    useTileSelection,
     useWheelZoom,
 } from '../../map';
-import type { AnimationLoopController, HoverState, OnSelectTile, ResolvedMapSettings, ViewState } from '../../map';
+import type { HoverState, OnSelectTile, ResolvedMapSettings, ViewState } from '../../map';
 import MapHud from './map-hud';
 
 // ============================================================================
@@ -46,7 +38,7 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
     const cursorAnimStartRef = useRef<number>(0); // カーソルアニメーション開始時刻(ms)。パルスの位相計算に使う
 
     const { map_width, map_height, terrain_grid } = sector;
-    const { theme, renderOptions, tileSize: baseTileSize, marginTiles, initialScale } = settings.view;
+    const { theme, tileSize: baseTileSize, initialScale } = settings.view;
 
     const viewRef = useRef<ViewState>({ offsetX: 0, offsetY: 0, scale: initialScale });
 
@@ -64,181 +56,43 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         [map_width, map_height, baseTileSize, initialScale]
     );
 
-    // 画像の読み込み完了時に最新の地形描画を呼ぶため、描画処理はref経由で参照する
-    const renderRef = useRef<() => void>(() => {});
-    const images = useTerrainImages(settings.images, () => renderRef.current());
-
-    const render = useCallback(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        const { width, height } = sizeRef.current;
-        if (width <= 0 || height <= 0) return;
-
-        ctx.clearRect(0, 0, width, height);
-        applyCanvasRenderOptions(ctx, renderOptions);
-        const view = viewRef.current;
-        const { colStart, colEnd, rowStart, rowEnd, tileSize } = getVisibleRange(
-            view,
-            width,
-            height,
-            map_width,
-            map_height,
-            { tileSize: baseTileSize, marginTiles }
-        );
-
-        let count = 0;
-        const start = performance.now();
-
-        // オプションに応じたタイル描画サイズを計算
-        const renderSize = calcTileRenderSize(tileSize, renderOptions);
-
-        for (let y = rowStart; y <= rowEnd; y++) {
-            for (let x = colStart; x <= colEnd; x++) {
-                const cell = terrain_grid[y]?.[x];
-                if (!cell) continue;
-
-                const { px, py } = tileToPixel(x, y, view, baseTileSize);
-                const drawX = px - tileSize / 2;
-                const drawY = py - tileSize / 2;
-
-                // 画像が未定義の地形タイプはフォールバック矩形で描く
-                const imgSrc = settings.images[cell.type];
-                const img = imgSrc ? images.get(imgSrc) : undefined;
-
-                if (img && img.complete && img.naturalWidth > 0) {
-                    ctx.drawImage(img, drawX, drawY, renderSize, renderSize);
-                } else {
-                    ctx.fillStyle = theme.fallbackBg;
-                    ctx.fillRect(drawX, drawY, renderSize, renderSize);
-                    ctx.strokeStyle = theme.fallbackBorder;
-                    ctx.strokeRect(drawX, drawY, renderSize, renderSize);
-                }
-                count++;
-            }
-        }
-
-        const elapsed = performance.now() - start;
+    // 性能計測テキストを HUD へ書き込む（React の再レンダリングを避けるため textContent を直接更新する）
+    const handleStatsUpdate = useCallback((text: string) => {
         if (statsRef.current) {
-            statsRef.current.textContent = `描画: ${elapsed.toFixed(2)}ms / マス数: ${count} / 表示領域: ${width}x${height}`;
+            statsRef.current.textContent = text;
         }
-    }, [map_width, map_height, terrain_grid, baseTileSize, marginTiles, renderOptions, theme, settings.images, images]);
+    }, []);
 
-    // ループや読み込み完了コールバックへ常に最新の描画処理を渡せるようにする
-    useEffect(() => {
-        renderRef.current = render;
+    const { renderOverlay, renderAll } = useMapRenderer({
+        canvasRef,
+        overlayCanvasRef,
+        sizeRef,
+        viewRef,
+        selectedTileRef,
+        hoverStateRef,
+        hoverFadeStartRef,
+        cursorAnimStartRef,
+        sector,
+        settings,
+        onStatsUpdate: handleStatsUpdate,
     });
 
-    // オーバーレイの再描画。ホバーガイドライン・選択カーソル・座標ラベルを描く
-    const renderOverlay = useCallback(() => {
-        const canvas = overlayCanvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        const { width, height } = sizeRef.current;
-        if (width <= 0 || height <= 0) return;
+    const { cursorLoop, handleHoverChange } = useMapAnimations({
+        selectedTileRef,
+        hoverFadeStartRef,
+        hoverStateRef,
+        fadeDurationMs: settings.hoverGrid.fadeDurationMs,
+        renderOverlay,
+    });
 
-        ctx.clearRect(0, 0, width, height);
-
-        // ホバーガイドライン（選択カーソル・ラベルより先に描き、文字に重ならないようにする）
-        // ホバー位置が変わった時点から fadeDurationMs かけてフェードアウトする
-        const hoverFadeAlpha = calcHoverFadeAlpha(
-            hoverFadeStartRef.current,
-            performance.now(),
-            settings.hoverGrid.fadeDurationMs
-        );
-        drawHoverGuideLines(
-            ctx,
-            hoverStateRef.current,
-            viewRef.current,
-            width,
-            height,
-            map_width,
-            map_height,
-            hoverFadeAlpha,
-            settings.hoverGrid,
-            baseTileSize
-        );
-
-        // 選択カーソル（2秒周期のパルス付き角ブラケット）
-        if (selectedTileRef.current) {
-            const view = viewRef.current;
-            const tileSize = baseTileSize * view.scale;
-            const renderSize = calcTileRenderSize(tileSize, renderOptions);
-            const { x, y } = selectedTileRef.current;
-            const { px, py } = tileToPixel(x, y, view, baseTileSize);
-            const elapsed = performance.now() - cursorAnimStartRef.current;
-            const scale = getPulseScale(elapsed, settings.cornerCursor);
-            drawCornerCursor(ctx, px - tileSize / 2, py - tileSize / 2, renderSize, scale, settings.cornerCursor);
-        }
-
-        // 座標ラベル（マップの上端・左端に追従。選択中の列・行は強調）
-        drawCoordLabels(
-            ctx,
-            viewRef.current,
-            width,
-            height,
-            map_width,
-            map_height,
-            baseTileSize,
-            selectedTileRef.current,
-            settings.label
-        );
-    }, [map_width, map_height, baseTileSize, renderOptions, settings.hoverGrid, settings.cornerCursor, settings.label]);
-
-    // パン・ズーム・リサイズ時に両レイヤーを再描画する
-    const renderAll = useCallback(() => {
-        render();
-        renderOverlay();
-    }, [render, renderOverlay]);
-
-    // 選択演出のパルス: 選択が外れたらループを止める
-    const cursorLoopRef = useRef<AnimationLoopController>(null);
-    const cursorLoop = useAnimationLoop(
-        useCallback(() => {
-            if (!selectedTileRef.current) {
-                cursorLoopRef.current?.stop();
-                return;
-            }
-            renderOverlay();
-        }, [renderOverlay])
-    );
-    useEffect(() => {
-        cursorLoopRef.current = cursorLoop;
-    }, [cursorLoop]);
-
-    // ホバーのフェード: フェード完了時に最後の描画をしてからループを止める
-    const hoverFadeLoopRef = useRef<AnimationLoopController>(null);
-    const hoverFadeLoop = useAnimationLoop(
-        useCallback(
-            (nowMs: number) => {
-                if (nowMs - hoverFadeStartRef.current >= settings.hoverGrid.fadeDurationMs) {
-                    hoverFadeLoopRef.current?.stop();
-                    renderOverlay();
-                    return;
-                }
-                renderOverlay();
-            },
-            [renderOverlay, settings.hoverGrid.fadeDurationMs]
-        )
-    );
-    useEffect(() => {
-        hoverFadeLoopRef.current = hoverFadeLoop;
-    }, [hoverFadeLoop]);
-
-    // ホバー位置が変わったとき: ラインを表示してフェードアウトを開始する（解除時は即座に消す）
-    const handleHoverChange = useCallback(() => {
-        const hover = hoverStateRef.current;
-        if (hover.x === null || hover.y === null) {
-            hoverFadeLoop.stop();
-            renderOverlay();
-            return;
-        }
-
-        hoverFadeStartRef.current = performance.now();
-        hoverFadeLoop.start();
-    }, [renderOverlay, hoverFadeLoop]);
+    const { handleTileConfirm } = useTileSelection({
+        selectedTileRef,
+        selectedHudRef,
+        cursorAnimStartRef,
+        cursorLoop,
+        terrain_grid,
+        onSelect,
+    });
 
     // ポインター位置→マス座標の変換（viewはref経由で常に最新の表示状態を参照する）
     const resolveHoverCell = useCallback(
@@ -302,19 +156,7 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         if (wasDragging) return;
 
         // マウス・ペンはホバー中のマスをクリックで即確定、タッチは同一マスへの2回目のタップで確定する
-        handleTapForHover(e, (tile) => {
-            selectedTileRef.current = tile;
-            if (selectedHudRef.current) {
-                selectedHudRef.current.textContent = `選択: (x=${tile.x}, y=${tile.y})`;
-            }
-
-            // セルが取得できない場合は通知せずHUDのみ更新する
-            const cell = terrain_grid[tile.y]?.[tile.x];
-            if (cell) onSelect?.({ coord: tile, cell });
-
-            cursorAnimStartRef.current = performance.now();
-            cursorLoop.start();
-        });
+        handleTapForHover(e, handleTileConfirm);
     };
 
     return (
