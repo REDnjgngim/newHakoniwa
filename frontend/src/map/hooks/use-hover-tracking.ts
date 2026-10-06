@@ -1,4 +1,5 @@
 import { useCallback, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
+import type { HoverCell, HoverState, HoverTrackingResult, PointerLocalPosition } from '../types';
 
 // ============================================================================
 // マウス/ペン/タッチの違いを吸収し、「今どのセルをホバーしているか」の状態管理と
@@ -7,24 +8,6 @@ import { useCallback, type PointerEvent as ReactPointerEvent, type RefObject } f
 // 描画側はその ref を読むだけでよく、ホバー位置が変化したときだけ
 // onHoverChange（再描画トリガー）が呼ばれる。
 // ============================================================================
-
-// ホバー対象のセル座標（マス座標）
-export interface HoverCell {
-    x: number;
-    y: number;
-}
-
-// ホバー中の状態。未ホバー時は x / y に null が入る
-export interface HoverState {
-    x: number | null;
-    y: number | null;
-}
-
-// ポインターイベントの要素内ローカル座標（CSS px）
-export interface PointerLocalPosition {
-    x: number;
-    y: number;
-}
 
 // クライアント座標を要素内ローカル座標へ変換（PointerEvent / MouseEvent / Touch いずれでも使える）
 export function getPointerLocalPosition(
@@ -40,23 +23,6 @@ function isHoverCapablePointer(event: { pointerType: string }): boolean {
     return event.pointerType !== 'touch';
 }
 
-export interface UseHoverTrackingResult<E extends HTMLElement> {
-    // ホバー状態を設定する（同一セルなら再描画しない）
-    setHover: (next: HoverState) => void;
-    // ホバーを解除する
-    clearHover: () => void;
-    // 指定セルがホバー中かどうか
-    isHoveredCell: (cell: HoverCell | null) => boolean;
-    // イベント位置をセル座標へ変換する（範囲外は null）
-    resolveEventCell: (event: ReactPointerEvent<E>) => HoverCell | null;
-    // pointermove 用: ホバー位置をポインターに追従させる（タッチでは何もしない）
-    handlePointerMoveForHover: (event: ReactPointerEvent<E>) => void;
-    // pointerleave 用: ホバーを解除する（タッチでは解除しない）
-    handlePointerLeaveForHover: (event?: ReactPointerEvent<E>) => void;
-    // pointerup 用: ホバー中と同一セルなら onConfirm、別セルならホバー移動のみ
-    handleTapForHover: (event: ReactPointerEvent<E>, onConfirm: (cell: HoverCell) => void) => void;
-}
-
 // ホバー追跡フック本体
 // hoverRef: ホバー状態を保持するref（描画側と共有するため呼び出し側が生成したものを渡す）
 export function useHoverTracking<E extends HTMLElement>(
@@ -64,7 +30,7 @@ export function useHoverTracking<E extends HTMLElement>(
     containerRef: RefObject<E | null>,
     resolveCell: (localX: number, localY: number) => HoverCell | null,
     onHoverChange: () => void
-): UseHoverTrackingResult<E> {
+): HoverTrackingResult<E> {
     const setHover = useCallback(
         (next: HoverState) => {
             const prev = hoverRef.current;

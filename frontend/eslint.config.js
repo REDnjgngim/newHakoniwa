@@ -41,5 +41,13 @@ export default [
             'react-refresh/only-export-components': 'off',
         },
     },
+    {
+        files: ['src/**/*.test.{ts,tsx}', 'src/test/**/*.ts'],
+        languageOptions: {
+            globals: {
+                ...globals.vitest,
+            },
+        },
+    },
     prettierConfig,
 ];

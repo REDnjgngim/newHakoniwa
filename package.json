@@ -1,15 +1,20 @@
 {
   "name": "newhakoniwa",
   "version": "1.0.0",
-  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "description": "ヘックスマップで島を育てて管理する箱庭諸島プロジェクト",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm --prefix frontend run test -- run",
     "prepare": "husky"
   },
-  "keywords": [],
+  "keywords": [
+    "hakoniwa",
+    "hex-map",
+    "react",
+    "typescript"
+  ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "husky": "^9.1.7",
     "lint-staged": "^17.5.1"
