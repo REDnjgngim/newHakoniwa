@@ -1,4 +1,5 @@
 import type {
+    BoundaryLineConfig,
     CornerCursorConfig,
     HexMapPreviewProps,
     HoverGridConfig,
@@ -16,17 +17,19 @@ export const MAP_VIEW_SETTINGS: MapConfig = {
     tileSize: 32, // 地形画像サイズ(px)
     initialScale: 1.0, // 初期表示倍率
     minScale: 0.5, // 最小表示倍率
-    maxScale: 10, // 最大表示倍率
+    maxScale: 12, // 最大表示倍率
     wheelZoomFactor: 1.15, // マウスホイールでのズーム倍率
     dragThresholdPx: 4, // ドラッグとクリックを判定する移動距離の閾値(px)
     marginTiles: 2, // 表示領域端から読み込むマスの余剰数
     maxViewportWidth: 3940, // 最大ビューポート幅
     maxViewportHeight: 2160, // 最大ビューポート高さ
+    panLimitMode: 'clamp', // 最外周タイルの中心が canvas 中央を跨がないようパンを制限する
     theme: {
         background: '#0e1a2b', // マップ領域の背景色
         border: '#2a3a52', // マップ領域の枠線色
         fallbackBg: '#18324f', // 地形画像が未ロードのときの背景色
         fallbackBorder: '#2e5b88', // 地形画像が未ロードのときの枠線色
+        outerSea: '#043f9a', // 12×12 グリッド外周のベタ塗り色
     },
     renderOptions: {
         imageSmoothing: false, // 画像の平滑化（falseでドット絵をくっきり表示）
@@ -71,6 +74,13 @@ export const CORNER_CURSOR_SETTINGS: CornerCursorConfig = {
     peakScale: 1.1, // パルス時のピークサイズ倍率
 };
 
+export const BOUNDARY_LINE_SETTINGS: BoundaryLineConfig = {
+    color: '#4d7aaa', // theme.border より少し明るい青白い光
+    lineWidth: 2.5,
+    glowColor: 'rgba(150, 200, 255, 0.4)',
+    glowBlur: 10,
+};
+
 // 注入された部分設定を既定値とマージし、描画側が参照する設定一式を解決する
 // （汎用のdeep mergeは型安全性が落ちるため、階層ごとに明示してマージする）
 export function resolveMapSettings(props: HexMapPreviewProps): ResolvedMapSettings {
@@ -94,6 +104,7 @@ export function resolveMapSettings(props: HexMapPreviewProps): ResolvedMapSettin
         label: { ...LABEL_SETTINGS, ...input?.label },
         hoverGrid: { ...HOVER_GRID_SETTINGS, ...input?.hoverGrid },
         cornerCursor: { ...CORNER_CURSOR_SETTINGS, ...input?.cornerCursor },
+        boundaryLine: { ...BOUNDARY_LINE_SETTINGS, ...input?.boundaryLine },
         images,
     };
 }

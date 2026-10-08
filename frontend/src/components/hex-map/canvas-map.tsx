@@ -1,6 +1,7 @@
 import { useCallback, useRef, type PointerEvent } from 'react';
 import type { SectorTerrainData } from '../../types/terrain';
 import {
+    clampPanOffset,
     pixelToTile,
     setupCanvasForDpr,
     useElementSize,
@@ -38,7 +39,7 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
     const cursorAnimStartRef = useRef<number>(0); // カーソルアニメーション開始時刻(ms)。パルスの位相計算に使う
 
     const { map_width, map_height, terrain_grid } = sector;
-    const { theme, tileSize: baseTileSize, initialScale } = settings.view;
+    const { theme, tileSize: baseTileSize, initialScale, panLimitMode } = settings.view;
 
     const viewRef = useRef<ViewState>({ offsetX: 0, offsetY: 0, scale: initialScale });
 
@@ -120,14 +121,27 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
 
             if (size.isFirst) initView(size.width, size.height);
 
+            // リサイズで可視領域が変わってもパン範囲内に収まるよう offset を制限し直す
+            if (panLimitMode !== 'none') {
+                viewRef.current = clampPanOffset(
+                    viewRef.current,
+                    size.width,
+                    size.height,
+                    map_width,
+                    map_height,
+                    baseTileSize
+                );
+            }
+
             renderAll();
         },
-        [initView, renderAll]
+        [initView, renderAll, panLimitMode, map_width, map_height, baseTileSize]
     );
 
+    // InspectorFrame が full-screen を担うため、container 側の上限は実質撤廃する
     useElementSize(
         containerRef,
-        { maxWidth: settings.view.maxViewportWidth, maxHeight: settings.view.maxViewportHeight },
+        { maxWidth: Number.MAX_SAFE_INTEGER, maxHeight: Number.MAX_SAFE_INTEGER },
         handleResize
     );
 
@@ -139,6 +153,11 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
             dragThresholdPx: settings.view.dragThresholdPx,
             minScale: settings.view.minScale,
             maxScale: settings.view.maxScale,
+            mapWidth: map_width,
+            mapHeight: map_height,
+            tileSize: baseTileSize,
+            panLimitMode,
+            canvasSize: sizeRef,
         }
     );
 
@@ -146,6 +165,11 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         wheelZoomFactor: settings.view.wheelZoomFactor,
         minScale: settings.view.minScale,
         maxScale: settings.view.maxScale,
+        mapWidth: map_width,
+        mapHeight: map_height,
+        tileSize: baseTileSize,
+        panLimitMode,
+        canvasSize: sizeRef,
     });
 
     const onContainerPointerUp = (e: PointerEvent<HTMLDivElement>) => {
@@ -160,8 +184,7 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
     };
 
     return (
-        <div className="flex flex-col items-center w-full h-full min-h-0">
-            <MapHud statsRef={statsRef} selectedHudRef={selectedHudRef} />
+        <div className="relative w-full h-full min-h-0">
             <div
                 ref={containerRef}
                 onPointerDown={handlePointerDown}
@@ -175,16 +198,16 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
                 style={{
                     position: 'relative',
                     width: '100%',
-                    maxWidth: `${settings.view.maxViewportWidth}px`,
                     height: '100%',
-                    maxHeight: `${settings.view.maxViewportHeight}px`,
                     touchAction: 'none',
                     overflow: 'hidden',
                     border: `1px solid ${theme.border}`,
                     background: theme.background,
                     boxSizing: 'border-box',
+                    minHeight: 0,
                 }}
             >
+                <MapHud statsRef={statsRef} selectedHudRef={selectedHudRef} />
                 <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0 }} />
                 <canvas
                     ref={overlayCanvasRef}

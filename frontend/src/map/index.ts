@@ -6,6 +6,7 @@
 // 型
 export type {
     AnimationLoopController,
+    BoundaryLineConfig,
     CornerCursorConfig,
     DeepPartial,
     HexMapPreviewProps,
@@ -21,6 +22,7 @@ export type {
     MapTheme,
     OnSelectTile,
     OverlayLabelConfig,
+    PanLimitMode,
     PinchState,
     PointerLocalPosition,
     PointerPanZoomResult,
@@ -33,6 +35,7 @@ export type {
 
 // 設定
 export {
+    BOUNDARY_LINE_SETTINGS,
     CORNER_CURSOR_SETTINGS,
     HOVER_GRID_SETTINGS,
     LABEL_SETTINGS,
@@ -43,6 +46,7 @@ export {
 // 幾何・Canvas
 export {
     clamp,
+    clampPanOffset,
     distance,
     getVisibleLabelRange,
     getVisibleRange,
@@ -53,6 +57,7 @@ export {
 export { applyCanvasRenderOptions, calcTileRenderSize, setupCanvasForDpr } from './canvas';
 
 // 描画
+export { drawBoundaryLine } from './render/boundary-line';
 export { drawCoordLabels, drawLabelText } from './render/coord-labels';
 export {
     calcHoverFadeAlpha,

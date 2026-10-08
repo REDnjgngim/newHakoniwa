@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, type RefObject } from 'react';
-import { clamp, zoomAroundPoint } from '../geometry';
-import type { ViewState } from '../types';
+import { clamp, clampPanOffset, zoomAroundPoint } from '../geometry';
+import type { PanLimitMode, ViewState } from '../types';
 
 // ============================================================================
 // マウスホイールによるズーム操作を提供するフック。
@@ -11,6 +11,11 @@ export interface WheelZoomSettings {
     wheelZoomFactor: number;
     minScale: number;
     maxScale: number;
+    mapWidth: number;
+    mapHeight: number;
+    tileSize: number;
+    panLimitMode: PanLimitMode;
+    canvasSize: RefObject<{ width: number; height: number }>;
 }
 
 export function useWheelZoom<E extends HTMLElement>(
@@ -39,7 +44,25 @@ export function useWheelZoom<E extends HTMLElement>(
         if (newScale === scale) return;
 
         // カーソル位置を中心にズーム
-        viewRef.current = zoomAroundPoint(viewRef.current, { x: cursorX, y: cursorY }, newScale);
+        const zoomed = zoomAroundPoint(viewRef.current, { x: cursorX, y: cursorY }, newScale);
+        // マップが完全に画面外へ消えないよう、ズーム後の offset を制限する
+        if (settings.panLimitMode !== 'none') {
+            const { width, height } = settings.canvasSize.current;
+            if (width > 0 && height > 0) {
+                viewRef.current = clampPanOffset(
+                    zoomed,
+                    width,
+                    height,
+                    settings.mapWidth,
+                    settings.mapHeight,
+                    settings.tileSize
+                );
+            } else {
+                viewRef.current = zoomed;
+            }
+        } else {
+            viewRef.current = zoomed;
+        }
         onChange();
     });
 

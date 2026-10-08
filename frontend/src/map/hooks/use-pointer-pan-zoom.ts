@@ -1,6 +1,6 @@
 import { useRef, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
-import { clamp, distance, zoomAroundPoint } from '../geometry';
-import type { PinchState, PointerPanZoomResult, ViewState } from '../types';
+import { clamp, clampPanOffset, distance, zoomAroundPoint } from '../geometry';
+import type { PanLimitMode, PinchState, PointerPanZoomResult, ViewState } from '../types';
 
 // ============================================================================
 // ドラッグ（パン）・ピンチ（ズーム）操作を提供するフック。
@@ -11,6 +11,19 @@ export interface PointerPanZoomSettings {
     dragThresholdPx: number;
     minScale: number;
     maxScale: number;
+    mapWidth: number;
+    mapHeight: number;
+    tileSize: number;
+    panLimitMode: PanLimitMode;
+    canvasSize: RefObject<{ width: number; height: number }>;
+}
+
+// マップが完全に画面外へ消えないよう、パン・ズーム後の view を制限する
+function applyPanLimit(view: ViewState, settings: PointerPanZoomSettings): ViewState {
+    if (settings.panLimitMode === 'none') return view;
+    const { width, height } = settings.canvasSize.current;
+    if (width <= 0 || height <= 0) return view;
+    return clampPanOffset(view, width, height, settings.mapWidth, settings.mapHeight, settings.tileSize);
 }
 
 export function usePointerPanZoom<E extends HTMLElement>(
@@ -70,18 +83,24 @@ export function usePointerPanZoom<E extends HTMLElement>(
             );
 
             // ピンチ開始時の中心が指し示すマップ座標を固定したまま倍率だけを変える
-            viewRef.current = zoomAroundPoint(pinch.view, { x: pinch.centerX, y: pinch.centerY }, newScale);
+            viewRef.current = applyPanLimit(
+                zoomAroundPoint(pinch.view, { x: pinch.centerX, y: pinch.centerY }, newScale),
+                settings
+            );
             onChange();
         } else if (pointersRef.current.size === 1) {
             const dragStart = dragStartRef.current;
             if (dragStart && distance(next, dragStart) > settings.dragThresholdPx) {
                 isDraggingRef.current = true;
             }
-            viewRef.current = {
-                ...viewRef.current,
-                offsetX: viewRef.current.offsetX - (next.x - prev.x),
-                offsetY: viewRef.current.offsetY - (next.y - prev.y),
-            };
+            viewRef.current = applyPanLimit(
+                {
+                    ...viewRef.current,
+                    offsetX: viewRef.current.offsetX - (next.x - prev.x),
+                    offsetY: viewRef.current.offsetY - (next.y - prev.y),
+                },
+                settings
+            );
             onChange();
         }
     };

@@ -1,5 +1,6 @@
 import {
     clamp,
+    clampPanOffset,
     distance,
     getVisibleLabelRange,
     getVisibleRange,
@@ -292,5 +293,71 @@ describe('ズーム中心計算の統合', () => {
             expect((ZOOM_CENTER.x + view.offsetX) / view.scale).toBeCloseTo(208, 6);
             expect((ZOOM_CENTER.y + view.offsetY) / view.scale).toBeCloseTo(208, 6);
         }
+    });
+});
+
+describe('clampPanOffset', () => {
+    it('範囲内の offset は変更しない（初期表示の中央揃えは制限内）', () => {
+        expect(clampPanOffset(initialView, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE)).toEqual(
+            initialView
+        );
+    });
+
+    it('画面外へパンした offset を上下限へ収める（実測値で固定）', () => {
+        const panned: ViewState = { offsetX: 10000, offsetY: -10000, scale: 1 };
+
+        expect(clampPanOffset(panned, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE)).toEqual({
+            offsetX: -16,
+            offsetY: -284,
+            scale: 1,
+        });
+    });
+
+    it('倍率が変わっても scale を保ったまま再計算する（実測値で固定）', () => {
+        const zoomed: ViewState = { offsetX: 0, offsetY: 0, scale: 3 };
+
+        expect(clampPanOffset(zoomed, CANVAS_WIDTH, CANVAS_HEIGHT, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE)).toEqual(zoomed);
+    });
+
+    it('制限の境界では最外周タイルの中心が canvas 中央に一致する', () => {
+        const minX = clampPanOffset(
+            { offsetX: -10000, offsetY: -92, scale: 1 },
+            CANVAS_WIDTH,
+            CANVAS_HEIGHT,
+            MAP_WIDTH,
+            MAP_HEIGHT,
+            TILE_SIZE
+        );
+        expect(tileToPixel(0, 0, minX, TILE_SIZE).px).toBe(CANVAS_WIDTH / 2);
+
+        const maxX = clampPanOffset(
+            { offsetX: 10000, offsetY: -92, scale: 1 },
+            CANVAS_WIDTH,
+            CANVAS_HEIGHT,
+            MAP_WIDTH,
+            MAP_HEIGHT,
+            TILE_SIZE
+        );
+        expect(tileToPixel(MAP_WIDTH - 1, 1, maxX, TILE_SIZE).px).toBe(CANVAS_WIDTH / 2);
+
+        const minY = clampPanOffset(
+            { offsetX: -192, offsetY: -10000, scale: 1 },
+            CANVAS_WIDTH,
+            CANVAS_HEIGHT,
+            MAP_WIDTH,
+            MAP_HEIGHT,
+            TILE_SIZE
+        );
+        expect(tileToPixel(0, 0, minY, TILE_SIZE).py).toBe(CANVAS_HEIGHT / 2);
+
+        const maxY = clampPanOffset(
+            { offsetX: -192, offsetY: 10000, scale: 1 },
+            CANVAS_WIDTH,
+            CANVAS_HEIGHT,
+            MAP_WIDTH,
+            MAP_HEIGHT,
+            TILE_SIZE
+        );
+        expect(tileToPixel(0, MAP_HEIGHT - 1, maxY, TILE_SIZE).py).toBe(CANVAS_HEIGHT / 2);
     });
 });

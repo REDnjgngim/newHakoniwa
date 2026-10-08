@@ -92,3 +92,42 @@ export function zoomAroundPoint(view: ViewState, point: { x: number; y: number }
         scale: newScale,
     };
 }
+
+// パン後の offset をクランプして、マップが完全に画面外へ消えないようにする。
+// 「12×12 グリッドの最外周タイルの中心が canvas 中央を跨いで外へ出ない」点が境界。
+// 具体的には以下の4条件を満たすよう offset を制限する。
+//   - 左端基準 (0, 0): タイル中心 px が canvasW / 2 を超えて右へ行き過ぎない
+//   - 右端基準 (mapW - 1, 1): 奇数行オフセットが適用される行を基準とし、
+//     タイル中心 px が canvasW / 2 より左へ行き過ぎない
+//   - 上端基準 (y = 0): タイル中心 py が canvasH / 2 を超えない
+//   - 下端基準 (y = mapH - 1): タイル中心 py が canvasH / 2 より上へ行き過ぎない
+export function clampPanOffset(
+    view: ViewState,
+    canvasW: number,
+    canvasH: number,
+    mapW: number,
+    mapH: number,
+    tileSize: number
+): ViewState {
+    const { offsetX, offsetY, scale } = view;
+
+    // offset = 0 基準での基準タイルの中心座標を求める（offsetX / offsetY は線形に引かれるだけなので、
+    // タイル中心の map 座標に scale を掛けたものが基準になる）
+    const zeroOffsetView: ViewState = { offsetX: 0, offsetY: 0, scale };
+    const leftPx = tileToPixel(0, 0, zeroOffsetView, tileSize).px;
+    const rightPx = tileToPixel(mapW - 1, 1, zeroOffsetView, tileSize).px;
+    const topPy = tileToPixel(0, 0, zeroOffsetView, tileSize).py;
+    const bottomPy = tileToPixel(0, mapH - 1, zeroOffsetView, tileSize).py;
+
+    // tileToPixel は px = 基準座標 - offsetX の形なので、条件式から offset の上下限を解く
+    const minOffsetX = leftPx - canvasW / 2;
+    const maxOffsetX = rightPx - canvasW / 2;
+    const minOffsetY = topPy - canvasH / 2;
+    const maxOffsetY = bottomPy - canvasH / 2;
+
+    return {
+        offsetX: clamp(offsetX, minOffsetX, maxOffsetX),
+        offsetY: clamp(offsetY, minOffsetY, maxOffsetY),
+        scale,
+    };
+}
