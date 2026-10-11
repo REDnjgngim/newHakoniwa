@@ -12,11 +12,11 @@ export interface MapHudProps {
 
 export default function MapHud({ statsRef, selectedHudRef }: MapHudProps) {
     return (
-        <div className="pointer-events-none absolute left-2 top-2 z-10 flex flex-col gap-1 rounded bg-black/50 px-2 py-1 text-left">
-            <div ref={statsRef} className="text-[#ffd27a] text-[11px] leading-tight">
+        <div className="pointer-events-none absolute top-2 left-2 z-10 flex flex-col gap-1 rounded bg-black/50 px-2 py-1 text-left">
+            <div ref={statsRef} className="text-[11px] leading-tight text-[#ffd27a]">
                 描画: -ms / マス数: 0
             </div>
-            <div ref={selectedHudRef} className="text-[#ffd27a] text-[11px] leading-tight">
+            <div ref={selectedHudRef} className="text-[11px] leading-tight text-[#ffd27a]">
                 選択: -
             </div>
         </div>

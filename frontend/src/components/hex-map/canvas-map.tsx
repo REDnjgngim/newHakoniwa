@@ -184,7 +184,7 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
     };
 
     return (
-        <div className="relative w-full h-full min-h-0">
+        <div className="relative size-full min-h-0">
             <div
                 ref={containerRef}
                 onPointerDown={handlePointerDown}

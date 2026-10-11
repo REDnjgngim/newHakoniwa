@@ -15,7 +15,7 @@ export default function HexMapPreview({ sector, settings, terrainImages, onSelec
 
     return (
         <div
-            className="flex flex-col items-stretch font-sans overflow-hidden box-border"
+            className="box-border flex flex-col items-stretch overflow-hidden font-sans"
             style={{ width: '100%', height: '100%', background: resolved.view.theme.background }}
         >
             <CanvasMap sector={sector} settings={resolved} onSelect={onSelect} />

@@ -12,9 +12,9 @@ interface InspectorFrameProps {
 
 export default function InspectorFrame({ children }: InspectorFrameProps) {
     return (
-        <div style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
+        <div className="fixed inset-0 flex flex-col overflow-hidden bg-slate-950 md:flex-row">
             {children}
-            {/* UI 配置用の 9:16 論理枠（不可視・操作を通過させる。将来タスクの複数並列配置の基準） */}
+            {/* UI 配置用の 9:16 論理枠（不可視・操作を通過させる） */}
             <div
                 aria-hidden="true"
                 style={{

@@ -9,14 +9,15 @@ import type { InspectorProps } from '../../types/inspector';
 
 export interface InspectorComponentProps extends InspectorProps {
     children?: ReactNode;
+    className?: string;
 }
 
-export default function Inspector({ id, type, children }: InspectorComponentProps) {
+export default function Inspector({ id, type, children, className = '' }: InspectorComponentProps) {
     return (
         <div
             data-inspector-id={id}
             data-inspector-type={type}
-            style={{ width: '100%', height: '100%', pointerEvents: 'auto', overflow: 'hidden' }}
+            className={`pointer-events-auto size-full overflow-hidden ${className}`}
         >
             {children}
         </div>
