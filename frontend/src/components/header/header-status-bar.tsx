@@ -52,7 +52,7 @@ export default function HeaderStatusBar({ status = mockIslandStatus, className =
 
                     {/* 右側: 常時表示のステータスボックス（幅は常時表示のまま固定） */}
                     <div
-                        className="flex min-w-0 shrink-0 items-center justify-end gap-[3px] px-1 py-1.5 whitespace-nowrap text-white sm:gap-2.5 sm:px-2.5"
+                        className="flex min-w-0 shrink-0 items-center justify-end gap-0.75 px-1 py-1.5 whitespace-nowrap text-white sm:gap-2.5 sm:px-2.5"
                         style={{
                             backgroundColor: PANEL_BG,
                             backdropFilter: 'blur(4px)',
@@ -87,7 +87,7 @@ export default function HeaderStatusBar({ status = mockIslandStatus, className =
                     data-testid="header-status-detail"
                     aria-hidden={!expanded}
                     onClick={(e) => e.stopPropagation()}
-                    className={`absolute top-full right-0 left-0 grid transition-all duration-300 ease-out ${
+                    className={`absolute inset-x-0 top-full grid transition-all duration-300 ease-out ${
                         expanded ? 'grid-rows-[1fr] opacity-100' : 'pointer-events-none grid-rows-[0fr] opacity-0'
                     }`}
                 >
