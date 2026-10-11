@@ -4,6 +4,7 @@ import tseslint from 'typescript-eslint';
 import pluginReactRefresh from 'eslint-plugin-react-refresh';
 import reactPlugin from '@eslint-react/eslint-plugin';
 import prettierConfig from 'eslint-config-prettier';
+import betterTailwindcss from 'eslint-plugin-better-tailwindcss';
 
 export default [
     {
@@ -50,4 +51,24 @@ export default [
         },
     },
     prettierConfig,
+    {
+        files: ['src/**/*.{ts,tsx,js,jsx}'],
+        plugins: {
+            'better-tailwindcss': betterTailwindcss,
+        },
+        settings: {
+            'better-tailwindcss': {
+                entryPoint: 'src/index.css',
+                rootFontSize: 16,
+            },
+        },
+        rules: {
+            'better-tailwindcss/no-duplicate-classes': 'warn',
+            'better-tailwindcss/no-conflicting-classes': 'error',
+            'better-tailwindcss/enforce-shorthand-classes': 'error',
+            'better-tailwindcss/enforce-canonical-classes': 'error',
+            'better-tailwindcss/no-unknown-classes': 'error',
+            'better-tailwindcss/no-unnecessary-whitespace': 'warn',
+        },
+    },
 ];
