@@ -28,12 +28,12 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
     const isFast = command.commandType === 'fast';
     const orderFormatted = String(command.order).padStart(2, '0');
 
-    // ターゲット島名の短縮表示（10文字超は「…」）
-    const targetIslandDisplay = command.targetIsland
-        ? command.targetIsland.length > 10
-            ? `${command.targetIsland.slice(0, 10)}…`
-            : command.targetIsland
-        : null;
+    // 2行目: 数量・パラメータ情報（表示優先のため summaryText をそのまま出す）
+    const detailLine = command.summaryText?.trim() ? command.summaryText : null;
+    // 3行目: 目標の島が必要な場合は別行にする
+    const targetIslandLine = command.targetIsland?.trim() ? command.targetIsland : null;
+    // 2行分の高さで固定し、3行になる場合は全体を縮小して収める
+    const isThreeLines = targetIslandLine !== null;
 
     return (
         <div className="relative w-full select-none">
@@ -56,7 +56,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                         onSelect();
                     }
                 }}
-                className={`relative flex cursor-pointer items-center gap-1.5 rounded px-2 py-1.5 text-xs transition-all sm:text-sm ${
+                className={`relative flex h-13 cursor-pointer items-center gap-1.5 overflow-hidden rounded px-2 py-1 text-xs transition-all sm:text-sm ${
                     isFast
                         ? 'mb-0.5 border-l-4 border-l-yellow-400 bg-slate-900/80'
                         : 'mb-2 border-l-4 border-l-blue-500 bg-slate-800/80'
@@ -68,14 +68,14 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                 <div
                     {...dragHandleProps}
                     aria-label="並び替えハンドル"
-                    className="cursor-grab px-0.5 font-mono text-slate-400 select-none hover:text-slate-200 active:cursor-grabbing"
+                    className="cursor-grab self-center px-0.5 font-mono text-slate-400 select-none hover:text-slate-200 active:cursor-grabbing"
                     onClick={(e) => e.stopPropagation()}
                 >
                     ⋮⋮
                 </div>
 
                 {/* 2桁リスト番号 */}
-                <span className="min-w-5 font-mono font-semibold text-slate-400">{orderFormatted}</span>
+                <span className="min-w-5 self-center font-mono font-semibold text-slate-400">{orderFormatted}</span>
 
                 {/* アコーディオン開閉トグル */}
                 <button
@@ -85,56 +85,71 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                         e.stopPropagation();
                         onToggleExpand();
                     }}
-                    className="p-0.5 text-xs text-slate-300 transition-transform hover:text-white"
+                    className="self-center p-0.5 text-xs text-slate-300 transition-transform hover:text-white"
                 >
                     {isExpanded ? '▼' : '▶'}
                 </button>
 
-                {/* 座標 (X, Y) */}
-                {command.coordinate && (
-                    <span className="shrink-0 font-mono text-[11px] text-sky-300 sm:text-xs">
-                        ({command.coordinate.x},{command.coordinate.y})
-                    </span>
-                )}
-
-                {/* 地形アイコン（座標から取得した地形画像） */}
-                <TerrainIcon coordinate={command.coordinate} />
-
-                {/* コマンド名 */}
-                <span className="max-w-30 truncate font-medium text-slate-100 sm:max-w-40">{command.name}</span>
-
-                {/* サマリーテキスト（数量・パラメータ情報） */}
-                {command.summaryText && (
-                    <span className="max-w-35 truncate text-[11px] text-slate-300 sm:text-xs">
-                        {command.summaryText}
-                    </span>
-                )}
-
-                {/* ターゲット島名 */}
-                {targetIslandDisplay && (
-                    <span
-                        className="max-w-22.5 truncate rounded border border-emerald-800/50 bg-slate-900/70 px-1 py-0.5 text-[10px] text-emerald-300 sm:text-[11px]"
-                        title={command.targetIsland}
+                {/* 中央: 1行目（座標・地形・コマンド名）＋2行目以降 */}
+                <div className="flex min-w-0 flex-1 flex-col justify-center self-stretch text-left">
+                    <div
+                        className={`flex min-w-0 items-center gap-1.5 text-left leading-relaxed ${isThreeLines ? 'text-[11px] leading-tight' : ''}`}
                     >
-                        &lt;{targetIslandDisplay}&gt;
-                    </span>
-                )}
+                        {/* 座標 (X, Y) */}
+                        {command.coordinate && (
+                            <span
+                                className={`shrink-0 font-mono text-sky-300 ${isThreeLines ? 'text-[10px]' : 'text-xs sm:text-[13px]'}`}
+                            >
+                                ({command.coordinate.x},{command.coordinate.y})
+                            </span>
+                        )}
 
-                {/* スタックバッジ */}
-                {command.stackCount && command.stackCount > 1 && (
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onStackClick?.();
-                        }}
-                        className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/20 px-1.5 py-1 font-mono text-[10px] font-bold text-amber-300 hover:bg-amber-500/30"
-                    >
-                        X {command.stackCount}
-                    </button>
-                )}
+                        {/* 地形アイコン（座標から取得した地形画像） */}
+                        <TerrainIcon coordinate={command.coordinate} size={isThreeLines ? 16 : 20} />
 
-                <div className="flex-1" />
+                        {/* コマンド名 */}
+                        <span
+                            className={`truncate text-left font-medium text-slate-100 ${isThreeLines ? 'text-[11px]' : 'text-[13px] sm:text-sm'}`}
+                        >
+                            {command.name}
+                        </span>
+
+                        {/* スタックバッジ */}
+                        {command.stackCount && command.stackCount > 1 && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onStackClick?.();
+                                }}
+                                className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/20 px-1.5 py-1 font-mono text-[10px] font-bold text-amber-300 hover:bg-amber-500/30"
+                            >
+                                X {command.stackCount}
+                            </button>
+                        )}
+                    </div>
+
+                    {/* 数量・パラメータ行 */}
+                    {detailLine && (
+                        <div
+                            data-testid={`command-detail-line-${command.id}`}
+                            className={`truncate text-left text-slate-300 ${isThreeLines ? 'text-[10px] leading-tight' : 'text-xs/relaxed sm:text-[13px]'}`}
+                        >
+                            {detailLine}
+                        </div>
+                    )}
+
+                    {/* 目標の島行 */}
+                    {targetIslandLine && (
+                        <div
+                            data-testid={`command-target-line-${command.id}`}
+                            className="truncate text-left text-[10px] leading-tight text-emerald-300"
+                            title={command.targetIsland}
+                        >
+                            &lt;{targetIslandLine}&gt;
+                        </div>
+                    )}
+                </div>
 
                 {/* 削除ボタン */}
                 <button
@@ -144,7 +159,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                         e.stopPropagation();
                         onDelete();
                     }}
-                    className="shrink-0 rounded p-1 text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                    className="shrink-0 self-center rounded p-1 text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
                 >
                     🗑️
                 </button>

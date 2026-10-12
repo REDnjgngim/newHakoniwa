@@ -53,13 +53,13 @@ export const CommandDetailEditor: React.FC<CommandDetailEditorProps> = ({ comman
         // サマリーテキストも適宜連動
         let summaryText = command.summaryText;
         if ('repeatCount' in updatedParams) {
-            summaryText = `[${safeVal}回]`;
+            summaryText = `${safeVal}回`;
         } else if ('amount' in updatedParams) {
-            summaryText = `[輸出量: ${safeVal}トン]`;
+            summaryText = `輸出量: ${safeVal}トン`;
         } else if ('missileCount' in updatedParams) {
-            summaryText = `[制御回数: ${safeVal}発]`;
+            summaryText = `発射数: ${safeVal}発`;
         } else if ('scale' in updatedParams) {
-            summaryText = `[規模: ${safeVal}億円]`;
+            summaryText = `規模: ${safeVal}億円`;
         }
 
         onUpdate({
