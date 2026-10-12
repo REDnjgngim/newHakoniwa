@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ReservationCommand } from '../../types/command-reservation';
+import { TerrainIcon } from './TerrainIcon';
 
 export interface CommandListItemProps {
     command: ReservationCommand;
@@ -96,12 +97,8 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                     </span>
                 )}
 
-                {/* 地形アイコン */}
-                {command.terrainIcon && (
-                    <span className="shrink-0 text-sm" role="img" aria-label="地形アイコン">
-                        {command.terrainIcon}
-                    </span>
-                )}
+                {/* 地形アイコン（座標から取得した地形画像） */}
+                <TerrainIcon coordinate={command.coordinate} />
 
                 {/* コマンド名 */}
                 <span className="max-w-30 truncate font-medium text-slate-100 sm:max-w-40">{command.name}</span>

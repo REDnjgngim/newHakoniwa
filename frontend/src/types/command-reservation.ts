@@ -11,7 +11,6 @@ export interface ReservationCommand {
     commandType: CommandType;
     name: string;
     coordinate?: Coordinate;
-    terrainIcon?: string;
     summaryText?: string;
     targetIsland?: string;
     stackCount?: number;
