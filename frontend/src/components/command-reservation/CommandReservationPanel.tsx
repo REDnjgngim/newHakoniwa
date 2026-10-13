@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { ReservationCommand, TabType } from '../../types/command-reservation';
 import { mockReservationCommands } from '../../mocks/command-reservation';
 import { useReservationHistory } from '../../hooks/useReservationHistory';
@@ -17,19 +17,8 @@ export const CommandReservationPanel: React.FC<CommandReservationPanelProps> = (
     initialCommands = mockReservationCommands,
     onSelectCommand,
 }) => {
-    const {
-        commands,
-        updateCommand,
-        deleteCommand,
-        reorderCommands,
-        undo,
-        redo,
-        canUndo,
-        canRedo,
-        isDirty,
-        markSaved,
-    } = useReservationHistory(initialCommands);
-
+    const { commands, updateCommand, deleteCommand, reorderCommands, undo, redo, canUndo, canRedo, markSaved } =
+        useReservationHistory(initialCommands);
     // タブ選択状態（デフォルト「予約」）
     const [activeTab, setActiveTab] = useState<TabType>('reservation');
 
@@ -83,21 +72,6 @@ export const CommandReservationPanel: React.FC<CommandReservationPanelProps> = (
         setToastMessage('予約を登録しました');
         setIsToastVisible(true);
     }, [markSaved]);
-
-    // 未保存離脱警告（beforeunload）
-    useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (isDirty) {
-                e.preventDefault();
-                e.returnValue = '';
-            }
-        };
-
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
-    }, [isDirty]);
 
     return (
         <BottomSheetContainer>

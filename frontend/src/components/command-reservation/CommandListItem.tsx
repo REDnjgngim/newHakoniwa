@@ -6,19 +6,30 @@ export interface CommandListItemProps {
     command: ReservationCommand;
     isExpanded: boolean;
     isFocused: boolean;
-    isInsertTarget?: boolean;
+    isInsertAbove?: boolean;
+    isInsertBelow?: boolean;
+    /** 直前が同じ種別（青色同士など）の場合に連結表示する */
+    isConnectedToPrev?: boolean;
+    /** 直後が同じ種別（青色同士など）の場合に連結表示する */
+    isConnectedToNext?: boolean;
     onToggleExpand: () => void;
     onSelect: () => void;
     onDelete: () => void;
     onStackClick?: () => void;
-    dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
+    dragHandleProps?: React.HTMLAttributes<HTMLDivElement> & {
+        draggable?: boolean;
+        onDragStart?: React.DragEventHandler<HTMLDivElement>;
+    };
 }
 
 export const CommandListItem: React.FC<CommandListItemProps> = ({
     command,
     isExpanded,
     isFocused,
-    isInsertTarget = false,
+    isInsertAbove = false,
+    isInsertBelow = false,
+    isConnectedToPrev = false,
+    isConnectedToNext = false,
     onToggleExpand,
     onSelect,
     onDelete,
@@ -34,14 +45,27 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
     const targetIslandLine = command.targetIsland?.trim() ? command.targetIsland : null;
     // 2行分の高さで固定し、3行になる場合は全体を縮小して収める
     const isThreeLines = targetIslandLine !== null;
+    // 青色（高速）の下は常に隙間なし。青色・黄色とも角丸なしの四角で統一する
+    const roundedClass = 'rounded-none';
+    const borderClass = isFast
+        ? `${isConnectedToPrev ? 'border-t-0' : ''} ${isConnectedToNext ? 'border-b-0' : ''}`
+        : '';
+    const marginClass = isFast ? 'mb-0' : 'mb-2';
 
     return (
         <div className="relative w-full select-none">
             {/* 直上の挿入ライン */}
-            {isInsertTarget && (
+            {isInsertAbove && (
                 <div
-                    data-testid="insert-target-line"
+                    data-testid="insert-target-line-above"
                     className="absolute inset-x-0 -top-1 z-10 h-0.5 bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]"
+                />
+            )}
+            {/* 直下の挿入ライン */}
+            {isInsertBelow && (
+                <div
+                    data-testid="insert-target-line-below"
+                    className="absolute inset-x-0 -bottom-1 z-10 h-0.5 bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]"
                 />
             )}
 
@@ -56,26 +80,38 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                         onSelect();
                     }
                 }}
-                className={`relative flex h-13 cursor-pointer items-center gap-1.5 overflow-hidden rounded px-2 py-1 text-xs transition-all sm:text-sm ${
+                className={`relative flex h-13 cursor-pointer items-center gap-1 overflow-hidden ${roundedClass} ${borderClass} border py-1 pr-2 pl-1 text-xs transition-all sm:text-sm ${
                     isFast
-                        ? 'mb-0.5 border-l-4 border-l-yellow-400 bg-slate-900/80'
-                        : 'mb-2 border-l-4 border-l-blue-500 bg-slate-800/80'
-                } ${
-                    isFocused ? 'shadow-md ring-2 shadow-red-500/20 ring-red-500' : 'hover:bg-slate-700/80'
-                } border border-slate-700/60 text-slate-100`}
+                        ? `${marginClass} border-cyan-200/50 bg-linear-to-b from-[#0d7f9c] via-[#0080A0] to-[#046276] text-white shadow-[inset_0_1px_0_rgba(207,250,254,0.35),0_1px_6px_rgba(8,145,178,0.35)] hover:from-[#1093b1] hover:via-[#0092b5] hover:to-[#057183]`
+                        : `${marginClass} border-amber-200/50 bg-linear-to-b from-[#e89a1d] via-[#d08000] to-[#9c5f00] text-white shadow-[inset_0_1px_0_rgba(254,243,199,0.4),0_1px_6px_rgba(180,83,9,0.35)] hover:from-[#f0a832] hover:via-[#dd8d0f] hover:to-[#a96a05]`
+                } ${isFocused ? 'shadow-md ring-2 shadow-red-500/20 ring-red-500' : ''}`}
             >
-                {/* 並び替えハンドル */}
+                {/* 上部ハイライトライン */}
+                <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-2 top-0 h-px bg-linear-to-r from-transparent via-white/60 to-transparent"
+                />
+                {/* 並び替えハンドル: 枠なし上下矢印（PC/スマホ同一・常時表示） */}
                 <div
                     {...dragHandleProps}
+                    data-drag-handle
                     aria-label="並び替えハンドル"
-                    className="cursor-grab self-center px-0.5 font-mono text-slate-400 select-none hover:text-slate-200 active:cursor-grabbing"
+                    title="ドラッグで入れ替え"
+                    className="relative flex cursor-grab touch-none items-center self-stretch px-0.5 py-1 select-none active:cursor-grabbing"
+                    style={{ touchAction: 'none' }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    ⋮⋮
+                    <div
+                        aria-hidden="true"
+                        className="flex h-full w-3.5 flex-col items-center justify-center gap-1 opacity-80"
+                    >
+                        <span className="size-0 border-x-5 border-b-7 border-x-transparent border-b-white/90" />
+                        <span className="size-0 border-x-5 border-t-7 border-x-transparent border-t-white/90" />
+                    </div>
                 </div>
 
                 {/* 2桁リスト番号 */}
-                <span className="min-w-5 self-center font-mono font-semibold text-slate-400">{orderFormatted}</span>
+                <span className="min-w-5 self-center font-mono text-white/90">{orderFormatted}</span>
 
                 {/* アコーディオン開閉トグル */}
                 <button
@@ -85,7 +121,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                         e.stopPropagation();
                         onToggleExpand();
                     }}
-                    className="self-center p-0.5 text-xs text-slate-300 transition-transform hover:text-white"
+                    className="self-center p-0.5 text-xs text-white/85 transition-transform hover:text-white"
                 >
                     {isExpanded ? '▼' : '▶'}
                 </button>
@@ -98,7 +134,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                         {/* 座標 (X, Y) */}
                         {command.coordinate && (
                             <span
-                                className={`shrink-0 font-mono text-sky-300 ${isThreeLines ? 'text-[10px]' : 'text-xs sm:text-[13px]'}`}
+                                className={`shrink-0 font-mono text-white ${isThreeLines ? 'text-[10px]' : 'text-xs sm:text-[13px]'}`}
                             >
                                 ({command.coordinate.x},{command.coordinate.y})
                             </span>
@@ -109,7 +145,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
 
                         {/* コマンド名 */}
                         <span
-                            className={`truncate text-left font-medium text-slate-100 ${isThreeLines ? 'text-[11px]' : 'text-[13px] sm:text-sm'}`}
+                            className={`truncate text-left font-medium text-white ${isThreeLines ? 'text-[11px]' : 'text-[13px] sm:text-sm'}`}
                         >
                             {command.name}
                         </span>
@@ -133,7 +169,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                     {detailLine && (
                         <div
                             data-testid={`command-detail-line-${command.id}`}
-                            className={`truncate text-left text-slate-300 ${isThreeLines ? 'text-[10px] leading-tight' : 'text-xs/relaxed sm:text-[13px]'}`}
+                            className={`truncate text-left text-white/90 ${isThreeLines ? 'text-[10px] leading-tight' : 'text-xs/relaxed sm:text-[13px]'}`}
                         >
                             {detailLine}
                         </div>
@@ -143,7 +179,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                     {targetIslandLine && (
                         <div
                             data-testid={`command-target-line-${command.id}`}
-                            className="truncate text-left text-[10px] leading-tight text-emerald-300"
+                            className="truncate text-left text-[10px] leading-tight text-white/90"
                             title={command.targetIsland}
                         >
                             &lt;{targetIslandLine}&gt;
@@ -159,7 +195,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                         e.stopPropagation();
                         onDelete();
                     }}
-                    className="shrink-0 self-center rounded p-1 text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                    className="shrink-0 self-center rounded bg-black/20 p-1 text-white transition-colors hover:bg-black/35"
                 >
                     🗑️
                 </button>

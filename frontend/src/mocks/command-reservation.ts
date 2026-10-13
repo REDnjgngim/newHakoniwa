@@ -26,7 +26,7 @@ export const mockReservationCommands: ReservationCommand[] = [
     {
         id: 'cmd-02',
         order: 2,
-        commandType: 'normal',
+        commandType: 'fast',
         name: '食料輸出',
         summaryText: '輸出量: 990000トン',
         estimatedTurn: 102,
@@ -116,6 +116,42 @@ export const mockReservationCommands: ReservationCommand[] = [
         params: {
             fleetName: 'はげはげふがふが艦隊',
             targetIsland: '1 2 3 4 5 6 7 8 9 0...島',
+        },
+    },
+    {
+        id: 'cmd-02b',
+        order: 9,
+        commandType: 'fast',
+        name: '食料輸出',
+        summaryText: '輸出量: 990000トン',
+        estimatedTurn: 102,
+        estimatedFundsDelta: 430,
+        params: {
+            amount: 990000,
+        },
+    },
+    {
+        id: 'cmd-02c',
+        order: 10,
+        commandType: 'fast',
+        name: '食料輸出',
+        summaryText: '輸出量: 990000トン',
+        estimatedTurn: 102,
+        estimatedFundsDelta: 430,
+        params: {
+            amount: 990000,
+        },
+    },
+    {
+        id: 'cmd-02d',
+        order: 11,
+        commandType: 'fast',
+        name: '食料輸出',
+        summaryText: '輸出量: 990000トン',
+        estimatedTurn: 102,
+        estimatedFundsDelta: 430,
+        params: {
+            amount: 990000,
         },
     },
 ];
