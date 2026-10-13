@@ -21,4 +21,4 @@ export interface ReservationCommand {
 
 export type TabType = 'reservation' | 'log' | 'message';
 
-export type BottomSheetSnap = 'collapsed' | 'half' | 'expanded';
+export type BottomSheetSnap = 'hidden' | 'collapsed' | 'half' | 'expanded' | 'full';
