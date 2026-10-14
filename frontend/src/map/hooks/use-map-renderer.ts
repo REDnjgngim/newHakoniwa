@@ -13,7 +13,6 @@ import { useTerrainImages } from './use-terrain-images';
 // 地形レイヤー描画（render）・オーバーレイ描画（renderOverlay）・両者の一括再描画
 // （renderAll）をまとめて提供するフック。地形画像の読み込み完了時の再描画も
 // このフック内部で完結させ、呼び出し側の renderRef を不要にする。
-// 性能計測テキストは HUD へ直接書き込まず、onStatsUpdate で外部へ通知する。
 // ============================================================================
 
 export interface MapRendererParams {
@@ -27,8 +26,6 @@ export interface MapRendererParams {
     cursorAnimStartRef: RefObject<number>;
     sector: SectorTerrainData;
     settings: ResolvedMapSettings;
-    /** 性能計測結果の通知先（HUD の textContent 更新などに使う） */
-    onStatsUpdate?: (text: string) => void;
 }
 
 export interface MapRendererResult {
@@ -49,7 +46,6 @@ export function useMapRenderer(params: MapRendererParams): MapRendererResult {
         cursorAnimStartRef,
         sector,
         settings,
-        onStatsUpdate,
     } = params;
     const { map_width, map_height, terrain_grid } = sector;
     const { theme, renderOptions, tileSize: baseTileSize, marginTiles } = settings.view;
@@ -79,9 +75,6 @@ export function useMapRenderer(params: MapRendererParams): MapRendererResult {
         const colEnd = Math.ceil((view.offsetX + width) / tileSize) + marginTiles;
         const rowStart = Math.floor(view.offsetY / tileSize) - marginTiles;
         const rowEnd = Math.ceil((view.offsetY + height) / tileSize) + marginTiles;
-
-        let count = 0;
-        const start = performance.now();
 
         // オプションに応じたタイル描画サイズを計算
         const renderSize = calcTileRenderSize(tileSize, renderOptions);
@@ -114,12 +107,8 @@ export function useMapRenderer(params: MapRendererParams): MapRendererResult {
                     ctx.strokeStyle = theme.fallbackBorder;
                     ctx.strokeRect(drawX, drawY, renderSize, renderSize);
                 }
-                count++;
             }
         }
-
-        const elapsed = performance.now() - start;
-        onStatsUpdate?.(`描画: ${elapsed.toFixed(2)}ms / マス数: ${count} / 表示領域: ${width}x${height}`);
     }, [
         canvasRef,
         sizeRef,
@@ -133,7 +122,6 @@ export function useMapRenderer(params: MapRendererParams): MapRendererResult {
         theme,
         settings.images,
         images,
-        onStatsUpdate,
     ]);
 
     // オーバーレイの再描画。ホバーガイドライン・選択カーソル・座標ラベルを描く

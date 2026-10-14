@@ -13,7 +13,6 @@ import {
     useWheelZoom,
 } from '../../map';
 import type { HoverState, OnSelectTile, ResolvedMapSettings, ViewState } from '../../map';
-import MapHud from './map-hud';
 
 // ============================================================================
 // マップ本体（地形レイヤーとオーバーレイレイヤーの2枚のcanvas）。
@@ -30,8 +29,6 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const statsRef = useRef<HTMLDivElement>(null);
-    const selectedHudRef = useRef<HTMLDivElement>(null);
     const sizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
     const selectedTileRef = useRef<{ x: number; y: number } | null>(null);
     const hoverStateRef = useRef<HoverState>({ x: null, y: null });
@@ -57,13 +54,6 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         [map_width, map_height, baseTileSize, initialScale]
     );
 
-    // 性能計測テキストを HUD へ書き込む（React の再レンダリングを避けるため textContent を直接更新する）
-    const handleStatsUpdate = useCallback((text: string) => {
-        if (statsRef.current) {
-            statsRef.current.textContent = text;
-        }
-    }, []);
-
     const { renderOverlay, renderAll } = useMapRenderer({
         canvasRef,
         overlayCanvasRef,
@@ -75,7 +65,6 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         cursorAnimStartRef,
         sector,
         settings,
-        onStatsUpdate: handleStatsUpdate,
     });
 
     const { cursorLoop, handleHoverChange } = useMapAnimations({
@@ -88,7 +77,6 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
 
     const { handleTileConfirm } = useTileSelection({
         selectedTileRef,
-        selectedHudRef,
         cursorAnimStartRef,
         cursorLoop,
         terrain_grid,
@@ -207,7 +195,6 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
                     minHeight: 0,
                 }}
             >
-                <MapHud statsRef={statsRef} selectedHudRef={selectedHudRef} />
                 <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0 }} />
                 <canvas
                     ref={overlayCanvasRef}
