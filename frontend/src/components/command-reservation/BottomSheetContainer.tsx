@@ -14,7 +14,7 @@ export const BottomSheetContainer: React.FC<BottomSheetContainerProps> = ({ chil
             data-testid="bottom-sheet-container"
             data-sheet-height-vh={Math.round(sheetHeightVh)}
             /* スマホ表示 (<768px): 画面下部固定のボトムシート / PC表示 (>=768px): 画面右側に幅固定の並列サイドパネル */
-            className={`fixed inset-x-0 bottom-0 z-30 flex flex-col overflow-hidden rounded-t-xl border border-sky-300/25 bg-[#0a3d4d]/95 shadow-[0_0_24px_rgba(56,189,248,0.18),inset_0_1px_0_rgba(186,230,253,0.15)] backdrop-blur-md md:static md:h-full md:max-h-full md:min-h-0 md:w-100 md:shrink-0 md:rounded-none md:border-t-0 md:border-l md:shadow-[inset_1px_0_0_rgba(186,230,253,0.12),0_0_32px_rgba(56,189,248,0.1)]`}
+            className={`fixed inset-x-0 bottom-0 z-30 flex flex-col overflow-hidden rounded-t-xl border border-sky-300/25 bg-[#0a3d4d]/95 shadow-[0_0_24px_rgba(56,189,248,0.18),inset_0_1px_0_rgba(186,230,253,0.15)] backdrop-blur-md md:static md:h-full md:max-h-full md:min-h-0 md:w-100 md:shrink-0 md:self-stretch md:rounded-xl md:border md:border-sky-300/30 md:shadow-[0_0_40px_rgba(56,189,248,0.25),inset_0_0_60px_rgba(8,145,178,0.15)]`}
             style={
                 // 画面幅がモバイルの場合のみ snapHeightStyle を適用する
                 typeof window !== 'undefined' && window.innerWidth >= 768 ? undefined : snapHeightStyle

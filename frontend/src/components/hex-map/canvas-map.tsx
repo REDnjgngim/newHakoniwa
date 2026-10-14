@@ -202,7 +202,7 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
                     touchAction: 'none',
                     overflow: 'hidden',
                     border: `1px solid ${theme.border}`,
-                    background: theme.background,
+                    background: theme.background ?? 'transparent',
                     boxSizing: 'border-box',
                     minHeight: 0,
                 }}

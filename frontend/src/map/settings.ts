@@ -25,11 +25,11 @@ export const MAP_VIEW_SETTINGS: MapConfig = {
     maxViewportHeight: 2160, // 最大ビューポート高さ
     panLimitMode: 'clamp', // 最外周タイルの中心が canvas 中央を跨がないようパンを制限する
     theme: {
-        background: '#0e1a2b', // マップ領域の背景色
+        // background: '#0e1a2b', // マップ領域の背景色
         border: '#2a3a52', // マップ領域の枠線色
         fallbackBg: '#18324f', // 地形画像が未ロードのときの背景色
         fallbackBorder: '#2e5b88', // 地形画像が未ロードのときの枠線色
-        outerSea: '#043f9a', // 12×12 グリッド外周のベタ塗り色
+        outerSea: '#043f9aa0', // 12×12 グリッド外周の色
     },
     renderOptions: {
         imageSmoothing: false, // 画像の平滑化（falseでドット絵をくっきり表示）

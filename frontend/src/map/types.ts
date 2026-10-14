@@ -11,7 +11,7 @@ export interface MapRenderOptions {
 
 // マップ領域の配色（背景・枠線・地形画像が未ロードのときの代替配色）
 export interface MapTheme {
-    background: string;
+    background?: string;
     border: string;
     fallbackBg: string;
     fallbackBorder: string;
