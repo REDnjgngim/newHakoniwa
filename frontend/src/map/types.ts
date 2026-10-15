@@ -11,10 +11,12 @@ export interface MapRenderOptions {
 
 // マップ領域の配色（背景・枠線・地形画像が未ロードのときの代替配色）
 export interface MapTheme {
-    background: string;
+    background?: string;
     border: string;
     fallbackBg: string;
     fallbackBorder: string;
+    /** 12×12 グリッド外周のベタ塗り色 */
+    outerSea: string;
 }
 
 export interface MapConfig {
@@ -28,6 +30,8 @@ export interface MapConfig {
     marginTiles: number;
     maxViewportWidth: number;
     maxViewportHeight: number;
+    /** パン範囲の制限方式（'none' で制限なし） */
+    panLimitMode: PanLimitMode;
     theme: MapTheme;
     renderOptions: MapRenderOptions;
 }
@@ -70,6 +74,18 @@ export interface CornerCursorConfig {
     outlineColor: string;
     baseScale: number;
     peakScale: number;
+}
+
+// パン範囲の制限方式。'clamp' は最外周タイルの中心が canvas 中央を跨いで
+// 画面外へ出ないよう offset を制限する
+export type PanLimitMode = 'none' | 'clamp';
+
+// 12×12 グリッドの外枠を囲む境界ラインの描画設定
+export interface BoundaryLineConfig {
+    color: string;
+    lineWidth: number;
+    glowColor: string;
+    glowBlur: number;
 }
 
 // マス座標（0始まり）
@@ -134,6 +150,7 @@ export interface MapSettingsInput {
     label?: Partial<OverlayLabelConfig>;
     hoverGrid?: Partial<HoverGridConfig>;
     cornerCursor?: Partial<CornerCursorConfig>;
+    boundaryLine?: Partial<BoundaryLineConfig>;
 }
 
 // 既定値と注入値をマージし終えた設定（描画側はこれだけを参照する）
@@ -142,6 +159,7 @@ export interface ResolvedMapSettings {
     label: OverlayLabelConfig;
     hoverGrid: HoverGridConfig;
     cornerCursor: CornerCursorConfig;
+    boundaryLine: BoundaryLineConfig;
     images: TerrainImageMap;
 }
 
