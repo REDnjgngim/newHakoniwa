@@ -32,7 +32,7 @@ export const mockReservationCommands: ReservationCommand[] = [
         estimatedTurn: 102,
         estimatedFundsDelta: 430,
         params: {
-            amount: 990000,
+            exportAmount: 990000,
         },
     },
     {
@@ -127,7 +127,7 @@ export const mockReservationCommands: ReservationCommand[] = [
         estimatedTurn: 102,
         estimatedFundsDelta: 430,
         params: {
-            amount: 990000,
+            exportAmount: 990000,
         },
     },
     {
@@ -139,7 +139,7 @@ export const mockReservationCommands: ReservationCommand[] = [
         estimatedTurn: 102,
         estimatedFundsDelta: 430,
         params: {
-            amount: 990000,
+            exportAmount: 990000,
         },
     },
     {
@@ -151,7 +151,20 @@ export const mockReservationCommands: ReservationCommand[] = [
         estimatedTurn: 102,
         estimatedFundsDelta: 430,
         params: {
-            amount: 990000,
+            exportAmount: 990000,
         },
     },
+];
+
+export const mockItems: IslandOption[] = [
+    { id: 'item-1', name: '闇のスパイ道具' },
+    { id: 'item-2', name: '死神の鎌' },
+    { id: 'item-3', name: '鉄壁の鎧' },
+];
+
+export const mockFleets: IslandOption[] = [
+    { id: 'fleet-1', name: 'はげはげふがふが艦隊' },
+    { id: 'fleet-2', name: '第2艦隊' },
+    { id: 'fleet-3', name: '第3艦隊' },
+    { id: 'fleet-4', name: '第4艦隊' },
 ];
