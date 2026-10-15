@@ -84,7 +84,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                     isFast
                         ? `${marginClass} border-cyan-200/50 bg-linear-to-b from-[#0d7f9c] via-[#0080A0] to-[#046276] text-white shadow-[inset_0_1px_0_rgba(207,250,254,0.35),0_1px_6px_rgba(8,145,178,0.35)] hover:from-[#1093b1] hover:via-[#0092b5] hover:to-[#057183]`
                         : `${marginClass} border-amber-200/50 bg-linear-to-b from-[#e89a1d] via-[#d08000] to-[#9c5f00] text-white shadow-[inset_0_1px_0_rgba(254,243,199,0.4),0_1px_6px_rgba(180,83,9,0.35)] hover:from-[#f0a832] hover:via-[#dd8d0f] hover:to-[#a96a05]`
-                } ${isFocused ? 'shadow-md ring-2 shadow-red-500/20 ring-red-500' : ''}`}
+                } ${isFocused ? 'z-10 shadow-md ring-2 shadow-red-500/20 ring-red-500' : ''}`}
             >
                 {/* 上部ハイライトライン */}
                 <div
