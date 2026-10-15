@@ -12,6 +12,8 @@ export interface CommandListItemProps {
     isConnectedToPrev?: boolean;
     /** 直後が同じ種別（青色同士など）の場合に連結表示する */
     isConnectedToNext?: boolean;
+    /** 展開時に中央列へ埋め込む詳細編集コンテンツ */
+    detailContent?: React.ReactNode;
     onToggleExpand: () => void;
     onSelect: () => void;
     onDelete: () => void;
@@ -30,6 +32,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
     isInsertBelow = false,
     isConnectedToPrev = false,
     isConnectedToNext = false,
+    detailContent,
     onToggleExpand,
     onSelect,
     onDelete,
@@ -80,7 +83,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                         onSelect();
                     }
                 }}
-                className={`relative flex h-13 cursor-pointer items-center gap-1 overflow-hidden ${roundedClass} ${borderClass} border py-1 pr-2 pl-1 text-xs transition-all sm:text-sm ${
+                className={`relative flex min-h-13 cursor-pointer gap-1 overflow-hidden ${roundedClass} ${borderClass} border py-1 pr-2 pl-1 text-xs transition-[background-color,border-color,box-shadow] duration-200 sm:text-sm ${
                     isFast
                         ? `${marginClass} border-cyan-200/50 bg-linear-to-b from-[#0d7f9c] via-[#0080A0] to-[#046276] text-white shadow-[inset_0_1px_0_rgba(207,250,254,0.35),0_1px_6px_rgba(8,145,178,0.35)] hover:from-[#1093b1] hover:via-[#0092b5] hover:to-[#057183]`
                         : `${marginClass} border-amber-200/50 bg-linear-to-b from-[#e89a1d] via-[#d08000] to-[#9c5f00] text-white shadow-[inset_0_1px_0_rgba(254,243,199,0.4),0_1px_6px_rgba(180,83,9,0.35)] hover:from-[#f0a832] hover:via-[#dd8d0f] hover:to-[#a96a05]`
@@ -121,7 +124,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                         e.stopPropagation();
                         onToggleExpand();
                     }}
-                    className="self-center p-0.5 text-xs text-white/85 transition-transform hover:text-white"
+                    className="self-center px-0.5 text-xs text-white/85 hover:cursor-pointer hover:text-white"
                 >
                     {isExpanded ? '▼' : '▶'}
                 </button>
@@ -129,62 +132,79 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                 {/* 中央: 1行目（座標・地形・コマンド名）＋2行目以降 */}
                 <div className="flex min-w-0 flex-1 flex-col justify-center self-stretch text-left">
                     <div
-                        className={`flex min-w-0 items-center gap-1.5 text-left leading-relaxed ${isThreeLines ? 'text-[11px] leading-tight' : ''}`}
+                        className={`grid min-w-0 transition-[grid-template-rows,opacity] duration-200 ease-out ${
+                            isExpanded ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
+                        }`}
+                        aria-hidden={isExpanded}
                     >
-                        {/* 座標 (X, Y) */}
-                        {command.coordinate && (
-                            <span
-                                className={`shrink-0 font-mono text-white ${isThreeLines ? 'text-[10px]' : 'text-xs sm:text-[13px]'}`}
+                        <div className="min-w-0 overflow-hidden">
+                            <div
+                                className={`flex min-w-0 items-center gap-1.5 text-left leading-relaxed ${isThreeLines ? 'text-[11px] leading-tight' : ''}`}
                             >
-                                ({command.coordinate.x},{command.coordinate.y})
-                            </span>
-                        )}
+                                {/* 座標 (X, Y) */}
+                                {command.coordinate && (
+                                    <span
+                                        className={`shrink-0 font-mono text-white ${isThreeLines ? 'text-[10px]' : 'text-xs sm:text-[13px]'}`}
+                                    >
+                                        ({command.coordinate.x},{command.coordinate.y})
+                                    </span>
+                                )}
 
-                        {/* 地形アイコン（座標から取得した地形画像） */}
-                        <TerrainIcon coordinate={command.coordinate} size={isThreeLines ? 16 : 20} />
+                                {/* 地形アイコン（座標から取得した地形画像） */}
+                                <TerrainIcon coordinate={command.coordinate} size={isThreeLines ? 16 : 20} />
 
-                        {/* コマンド名 */}
-                        <span
-                            className={`truncate text-left font-medium text-white ${isThreeLines ? 'text-[11px]' : 'text-[13px] sm:text-sm'}`}
-                        >
-                            {command.name}
-                        </span>
+                                {/* コマンド名 */}
+                                <span
+                                    className={`truncate text-left font-medium text-white ${isThreeLines ? 'text-[11px]' : 'text-[13px] sm:text-sm'}`}
+                                >
+                                    {command.name}
+                                </span>
 
-                        {/* スタックバッジ */}
-                        {command.stackCount && command.stackCount > 1 && (
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onStackClick?.();
-                                }}
-                                className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/20 px-1.5 py-1 font-mono text-[10px] font-bold text-amber-300 hover:bg-amber-500/30"
-                            >
-                                X {command.stackCount}
-                            </button>
-                        )}
+                                {/* スタックバッジ */}
+                                {command.stackCount && command.stackCount > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onStackClick?.();
+                                        }}
+                                        className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/20 px-1.5 py-1 font-mono text-[10px] font-bold text-amber-300 hover:bg-amber-500/30"
+                                    >
+                                        X {command.stackCount}
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* 数量・パラメータ行 */}
+                            {detailLine && (
+                                <div
+                                    data-testid={`command-detail-line-${command.id}`}
+                                    className={`truncate text-left text-white/90 ${isThreeLines ? 'text-[10px] leading-tight' : 'text-xs/relaxed sm:text-[13px]'}`}
+                                >
+                                    {detailLine}
+                                </div>
+                            )}
+
+                            {/* 目標の島行 */}
+                            {targetIslandLine && (
+                                <div
+                                    data-testid={`command-target-line-${command.id}`}
+                                    className="truncate text-left text-[10px] leading-tight text-white/90"
+                                    title={command.targetIsland}
+                                >
+                                    &lt;{targetIslandLine}&gt;
+                                </div>
+                            )}
+                        </div>
                     </div>
-
-                    {/* 数量・パラメータ行 */}
-                    {detailLine && (
-                        <div
-                            data-testid={`command-detail-line-${command.id}`}
-                            className={`truncate text-left text-white/90 ${isThreeLines ? 'text-[10px] leading-tight' : 'text-xs/relaxed sm:text-[13px]'}`}
-                        >
-                            {detailLine}
-                        </div>
-                    )}
-
-                    {/* 目標の島行 */}
-                    {targetIslandLine && (
-                        <div
-                            data-testid={`command-target-line-${command.id}`}
-                            className="truncate text-left text-[10px] leading-tight text-white/90"
-                            title={command.targetIsland}
-                        >
-                            &lt;{targetIslandLine}&gt;
-                        </div>
-                    )}
+                    <div
+                        className={`grid min-w-0 text-left transition-[grid-template-rows,opacity] duration-200 ease-out ${
+                            isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                        } ${isExpanded ? '' : 'invisible'}`}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="min-w-0 overflow-hidden">{detailContent}</div>
+                    </div>
                 </div>
 
                 {/* 削除ボタン */}
@@ -195,7 +215,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
                         e.stopPropagation();
                         onDelete();
                     }}
-                    className="shrink-0 self-center rounded bg-black/20 p-1 text-white transition-colors hover:bg-black/35"
+                    className="m-1 shrink-0 self-center rounded p-1 text-white transition-colors hover:cursor-pointer hover:bg-black/35"
                 >
                     🗑️
                 </button>

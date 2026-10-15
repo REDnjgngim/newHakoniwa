@@ -61,6 +61,7 @@ export const mockReservationCommands: ReservationCommand[] = [
         estimatedFundsDelta: -10,
         params: {
             fleetName: 'はげはげふがふが艦隊',
+            sourceIsland: '1 2 3 4 5 6 7 8 9 0...島',
             targetIsland: '1 2 3 4 5 6 7 8 9 0...島',
         },
     },
@@ -83,7 +84,6 @@ export const mockReservationCommands: ReservationCommand[] = [
         commandType: 'normal',
         name: '誘致活動',
         stackCount: 99,
-        summaryText: '(X 99 スタック)',
         estimatedTurn: 106,
         estimatedFundsDelta: -50,
         params: {
@@ -96,11 +96,11 @@ export const mockReservationCommands: ReservationCommand[] = [
         commandType: 'fast',
         name: 'アイテム装備',
         coordinate: { x: 24, y: 24 },
-        summaryText: 'アイテム: 闇のスパイ追跡',
+        summaryText: 'アイテム: 闇のスパイ道具',
         estimatedTurn: 106, // 高速コマンドなのでターン消費なし
         estimatedFundsDelta: 0,
         params: {
-            itemName: '闇のスパイ追跡',
+            itemName: '闇のスパイ道具',
         },
     },
     {

@@ -101,6 +101,12 @@ export const CommandList: React.FC<CommandListProps> = ({
                                 isInsertBelow={isInsertBelow}
                                 isConnectedToPrev={isConnectedToPrev}
                                 isConnectedToNext={isConnectedToNext}
+                                detailContent={
+                                    <CommandDetailEditor
+                                        command={cmd}
+                                        onUpdate={(updated) => onUpdateCommand(cmd.id, updated)}
+                                    />
+                                }
                                 onToggleExpand={() => onToggleExpand(cmd.id)}
                                 onSelect={() => handleRowSelect(cmd)}
                                 onDelete={() => onDeleteCommand(cmd.id)}
@@ -112,14 +118,6 @@ export const CommandList: React.FC<CommandListProps> = ({
                                     },
                                 }}
                             />
-
-                            {/* アコーディオン展開時の詳細編集パネル */}
-                            {isExpanded && (
-                                <CommandDetailEditor
-                                    command={cmd}
-                                    onUpdate={(updated) => onUpdateCommand(cmd.id, updated)}
-                                />
-                            )}
                         </div>
                     );
                 })

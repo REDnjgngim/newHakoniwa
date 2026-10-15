@@ -37,11 +37,11 @@ export const IslandSearchSelect: React.FC<IslandSearchSelectProps> = ({
     };
 
     return (
-        <div className="flex items-center justify-between gap-2">
-            <label htmlFor={inputId} className="shrink-0 text-sm">
+        <div className="flex items-center gap-2 text-left text-xs">
+            <label htmlFor={inputId} className="shrink-0 text-xs">
                 {label}
             </label>
-            <div className="min-w-0 flex-1">
+            <div className="inline-block w-auto max-w-55 min-w-30">
                 <Select<IslandSearchOption, false>
                     inputId={inputId}
                     aria-label={label}
@@ -58,20 +58,17 @@ export const IslandSearchSelect: React.FC<IslandSearchSelectProps> = ({
                     }}
                     classNames={{
                         control: () =>
-                            'border border-amber-200/40 rounded bg-amber-950/60 px-2 py-1 text-sm text-white cursor-pointer',
-                        menu: () => 'mt-1 rounded border border-amber-200/30 bg-amber-900 shadow-lg z-50',
+                            'border border-white/30 rounded bg-black/20 px-1.5 py-0.5 text-xs text-white cursor-pointer min-h-0',
+                        menu: () => 'mt-1 rounded border border-slate-700 bg-slate-900 shadow-xl text-xs',
                         menuList: () => 'py-1 max-h-60 overflow-y-auto',
-                        option: (state) =>
-                            state.isFocused || state.isSelected
-                                ? 'px-3 py-1.5 text-sm cursor-pointer bg-amber-700 text-white'
-                                : 'px-3 py-1.5 text-sm text-amber-100 cursor-pointer',
-                        input: () => 'text-white text-sm',
-                        placeholder: () => 'text-amber-200/50',
-                        singleValue: () => 'text-white',
-                        valueContainer: () => 'gap-1',
-                        indicatorsContainer: () => 'text-amber-200/70',
-                        dropdownIndicator: () => 'px-1 text-amber-200/70 hover:text-white',
-                        clearIndicator: () => 'px-1',
+                        option: () => 'px-2 py-1 text-xs cursor-pointer',
+                        input: () => 'text-xs text-white p-0 m-0',
+                        placeholder: () => 'text-xs text-white/50',
+                        singleValue: () => 'text-xs text-white',
+                        valueContainer: () => 'py-0 px-1 gap-1',
+                        indicatorsContainer: () => 'p-0 text-white/70',
+                        dropdownIndicator: () => 'p-0.5 text-white/70 hover:text-white',
+                        clearIndicator: () => 'p-0',
                     }}
                 />
             </div>

@@ -23,6 +23,7 @@ function detectPattern(command: ReservationCommand): CommandDetailPattern {
 }
 
 const EXPORT_AMOUNT_STEP = 10000;
+const SCALE_AMOUNT_STEP = 200;
 const SLIDER_MIN = 1;
 const SLIDER_MAX = 99;
 
@@ -45,7 +46,7 @@ function getSliderValue(pattern: CommandDetailPattern, command: ReservationComma
         case 'amount':
             return clampSliderValue(toNumberParam(params.amount, SLIDER_MIN));
         case 'scale':
-            return clampSliderValue(toNumberParam(params.scale, SLIDER_MIN));
+            return clampSliderValue(Math.round(toNumberParam(params.scale, SCALE_AMOUNT_STEP) / SCALE_AMOUNT_STEP));
         case 'stack':
             return clampSliderValue(command.stackCount ?? toNumberParam(params.stackCount, SLIDER_MIN));
         default:
@@ -64,7 +65,7 @@ function getSliderLabel(pattern: CommandDetailPattern): string {
         case 'scale':
             return '規模';
         case 'stack':
-            return 'スタック数';
+            return '回数';
         default:
             return '';
     }
@@ -74,12 +75,14 @@ function getSliderDisplayValue(pattern: CommandDetailPattern, sliderValue: numbe
     if (pattern === 'exportAmount') {
         return `${sliderValue * EXPORT_AMOUNT_STEP}トン`;
     }
+    if (pattern === 'scale') {
+        return `${sliderValue * SCALE_AMOUNT_STEP}億円`;
+    }
     return `${sliderValue}`;
 }
 export const CommandDetailEditor: React.FC<CommandDetailEditorProps> = ({ command, onUpdate }) => {
     const pattern = detectPattern(command);
     const sliderValue = getSliderValue(pattern, command);
-    const isFast = command.commandType === 'fast';
     const params = command.params ?? {};
     const targetIslandValue =
         typeof params.targetIsland === 'string' ? params.targetIsland : (command.targetIsland ?? null);
@@ -93,13 +96,6 @@ export const CommandDetailEditor: React.FC<CommandDetailEditorProps> = ({ comman
     const itemOptions = mockItems.map((item) => ({ value: item.name, label: item.name }));
     const fleetOptions = mockFleets.map((fleet) => ({ value: fleet.name, label: fleet.name }));
 
-    const handleCoordChange = (axis: 'x' | 'y', delta: 1 | -1) => {
-        const currentX = command.coordinate?.x ?? 0;
-        const currentY = command.coordinate?.y ?? 0;
-        const newX = axis === 'x' ? Math.max(0, currentX + delta) : currentX;
-        const newY = axis === 'y' ? Math.max(0, currentY + delta) : currentY;
-        onUpdate({ ...command, coordinate: { x: newX, y: newY } });
-    };
     const handleCoordSelect = (axis: 'x' | 'y', next: number) => {
         onUpdate({
             ...command,
@@ -115,15 +111,14 @@ export const CommandDetailEditor: React.FC<CommandDetailEditorProps> = ({ comman
         if (pattern === 'missile') updatedParams.missileCount = safeValue;
         else if (pattern === 'exportAmount') updatedParams.exportAmount = safeValue * EXPORT_AMOUNT_STEP;
         else if (pattern === 'amount') updatedParams.amount = safeValue;
-        else if (pattern === 'scale') updatedParams.scale = safeValue;
+        else if (pattern === 'scale') updatedParams.scale = safeValue * SCALE_AMOUNT_STEP;
         else if (pattern === 'stack') updatedParams.stackCount = safeValue;
         else return;
         let summaryText = command.summaryText;
         if (pattern === 'missile') summaryText = `発射数: ${safeValue}発`;
         else if (pattern === 'exportAmount') summaryText = `輸出量: ${safeValue * EXPORT_AMOUNT_STEP}トン`;
         else if (pattern === 'amount') summaryText = `数量: ${safeValue}`;
-        else if (pattern === 'scale') summaryText = `規模: ${safeValue}`;
-        else if (pattern === 'stack') summaryText = `(X ${safeValue} スタック)`;
+        else if (pattern === 'scale') summaryText = `規模: ${safeValue * SCALE_AMOUNT_STEP}億円`;
         onUpdate({
             ...command,
             summaryText,
@@ -140,16 +135,12 @@ export const CommandDetailEditor: React.FC<CommandDetailEditorProps> = ({ comman
     return (
         <div
             data-testid={`command-detail-${command.id}`}
-            className={
-                isFast
-                    ? 'rounded-b-md border border-cyan-200/40 bg-cyan-950/90 p-3 text-sm text-slate-200'
-                    : 'rounded-b-md border border-amber-300/70 bg-[#fdf6c0] p-3 text-sm text-slate-800'
-            }
+            className="w-full space-y-2 py-1 text-left text-white"
             onClick={(e) => e.stopPropagation()}
         >
-            <HeaderRow command={command} onSelect={handleCoordSelect} onStep={handleCoordChange} />
+            <HeaderRow command={command} onSelect={handleCoordSelect} />
             {showSlider && (
-                <div className="mt-2 flex items-center gap-2 text-sm">
+                <div className="flex items-center justify-start gap-2 text-left text-xs">
                     <span className="shrink-0">
                         {getSliderLabel(pattern)}: {getSliderDisplayValue(pattern, sliderValue)}
                     </span>
@@ -159,7 +150,7 @@ export const CommandDetailEditor: React.FC<CommandDetailEditorProps> = ({ comman
                         onClick={() => handleSliderValueChange(sliderValue - 1)}
                         className="shrink-0 rounded-full border border-current/30 px-2 leading-tight"
                     >
-                        (-)
+                        -
                     </button>
                     <input
                         type="range"
@@ -176,11 +167,11 @@ export const CommandDetailEditor: React.FC<CommandDetailEditorProps> = ({ comman
                         onClick={() => handleSliderValueChange(sliderValue + 1)}
                         className="shrink-0 rounded-full border border-current/30 px-2 leading-tight"
                     >
-                        (+)
+                        +
                     </button>
                 </div>
             )}
-            <div className="mt-2 space-y-2">
+            <div className="mt-2 space-y-2 text-left">
                 {pattern === 'missile' && (
                     <IslandSearchSelect
                         label="目標の島"
@@ -211,34 +202,34 @@ export const CommandDetailEditor: React.FC<CommandDetailEditorProps> = ({ comman
                             commandId={command.id}
                             labelSuffix="fleet"
                         />
-                        <IslandSearchSelect
-                            label="移動元の島"
-                            options={islandOptions}
-                            value={typeof params.sourceIsland === 'string' ? params.sourceIsland : null}
-                            onChange={(value) => handleParamTextChange('sourceIsland', value)}
-                            commandId={command.id}
-                            labelSuffix="source"
-                        />
-                        <IslandSearchSelect
-                            label="移動先の島"
-                            options={islandOptions}
-                            value={targetIslandValue}
-                            onChange={handleTargetIslandChange}
-                            commandId={command.id}
-                            labelSuffix="destination"
-                        />
+                        {command.name !== '戦艦建造' && (
+                            <>
+                                <IslandSearchSelect
+                                    label="移動元の島"
+                                    options={islandOptions}
+                                    value={typeof params.sourceIsland === 'string' ? params.sourceIsland : null}
+                                    onChange={(value) => handleParamTextChange('sourceIsland', value)}
+                                    commandId={command.id}
+                                    labelSuffix="source"
+                                />
+                                <IslandSearchSelect
+                                    label="移動先の島"
+                                    options={islandOptions}
+                                    value={targetIslandValue}
+                                    onChange={handleTargetIslandChange}
+                                    commandId={command.id}
+                                    labelSuffix="destination"
+                                />
+                            </>
+                        )}
                     </>
                 )}
             </div>
-            <div className="mt-3 space-y-0.5 border-t border-current/20 pt-2 text-xs opacity-80">
+            <div className="mt-2 space-y-0.5 border-t border-white/20 pt-1 text-left text-[10px] leading-tight text-white/90 sm:text-[11px]">
                 <div>実行予定ターン: T{command.estimatedTurn}</div>
                 <div>
                     [T{command.estimatedTurn}でのここまでの推定資金増減:{' '}
-                    <span
-                        className={
-                            command.estimatedFundsDelta >= 0 ? 'font-bold text-emerald-600' : 'font-bold text-rose-600'
-                        }
-                    >
+                    <span className="font-bold">
                         {command.estimatedFundsDelta >= 0 ? '+' : ''}
                         {command.estimatedFundsDelta}億円
                     </span>
@@ -252,58 +243,22 @@ export const CommandDetailEditor: React.FC<CommandDetailEditorProps> = ({ comman
 function HeaderRow({
     command,
     onSelect,
-    onStep,
 }: {
     command: ReservationCommand;
     onSelect: (axis: 'x' | 'y', next: number) => void;
-    onStep: (axis: 'x' | 'y', delta: 1 | -1) => void;
 }) {
-    if (!command.coordinate) return <div className="text-sm font-bold">{command.name}</div>;
+    if (!command.coordinate) return <div className="text-left text-xs font-medium sm:text-sm">{command.name}</div>;
     return (
-        <div className="flex flex-wrap items-center gap-1 text-sm font-bold">
-            <span>座標(</span>
+        <div className="flex items-center gap-1.5 text-left text-xs font-medium sm:text-sm">
             <span className="inline-flex items-center">
-                [<CoordSelect axis="x" value={command.coordinate.x} onSelect={onSelect} />]
+                (<CoordSelect axis="x" value={command.coordinate.x} onSelect={onSelect} />
             </span>
+            <span>,</span>
             <span className="inline-flex items-center">
-                [<CoordSelect axis="y" value={command.coordinate.y} onSelect={onSelect} />]
+                <CoordSelect axis="y" value={command.coordinate.y} onSelect={onSelect} />)
             </span>
             <TerrainIcon coordinate={command.coordinate} size={20} />
             <span>{command.name}</span>
-            <span className="ml-1 inline-flex gap-1 text-[10px] font-normal">
-                <button
-                    type="button"
-                    aria-label="Xを減らす"
-                    onClick={() => onStep('x', -1)}
-                    className="rounded border border-current/30 px-1 leading-tight"
-                >
-                    X-
-                </button>
-                <button
-                    type="button"
-                    aria-label="Xを増やす"
-                    onClick={() => onStep('x', 1)}
-                    className="rounded border border-current/30 px-1 leading-tight"
-                >
-                    X+
-                </button>
-                <button
-                    type="button"
-                    aria-label="Yを減らす"
-                    onClick={() => onStep('y', -1)}
-                    className="rounded border border-current/30 px-1 leading-tight"
-                >
-                    Y-
-                </button>
-                <button
-                    type="button"
-                    aria-label="Yを増やす"
-                    onClick={() => onStep('y', 1)}
-                    className="rounded border border-current/30 px-1 leading-tight"
-                >
-                    Y+
-                </button>
-            </span>
         </div>
     );
 }
@@ -322,11 +277,11 @@ function CoordSelect({
             aria-label={axis === 'x' ? 'X座標選択' : 'Y座標選択'}
             value={value}
             onChange={(e) => onSelect(axis, Number(e.target.value))}
-            className="cursor-pointer appearance-none bg-transparent text-center font-bold underline decoration-dotted underline-offset-4"
+            className="cursor-pointer appearance-none rounded bg-black/30 px-0.5 text-center font-bold text-white underline decoration-dotted underline-offset-4"
         >
             {Array.from({ length: 30 }, (_, i) => i).map((v) => (
-                <option key={v} value={v}>
-                    ▼{v}
+                <option key={v} value={v} className="bg-slate-900 text-white">
+                    {v}
                 </option>
             ))}
         </select>
