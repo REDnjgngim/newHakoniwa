@@ -15,24 +15,20 @@ export interface UseReservationHistoryReturn {
     resetCommands: (newCommands: ReservationCommand[]) => void;
 }
 
-function normalizeOrders(cmds: ReservationCommand[]): ReservationCommand[] {
-    return cmds.map((cmd, idx) => ({
-        ...cmd,
-        order: idx + 1,
-    }));
-}
-
 export function useReservationHistory(initialCommands: ReservationCommand[]): UseReservationHistoryReturn {
     // 3スタック（past, present, future）方式による履歴管理
+    // 表示番号は描画時に index+1 で出す。内部に order を持たない。
+    // 将来バックエンドが order を要求したら送信直前に
+    // commands.map((c, i) => ({ ...c, order: i + 1 })) で付与する。
     const [past, setPast] = useState<ReservationCommand[][]>([]);
-    const [present, setPresent] = useState<ReservationCommand[]>(() => normalizeOrders(initialCommands));
+    const [present, setPresent] = useState<ReservationCommand[]>(initialCommands);
     const [future, setFuture] = useState<ReservationCommand[][]>([]);
     const [isDirty, setIsDirty] = useState<boolean>(false);
 
     // 新しい状態への遷移共通関数
     const setNextState = useCallback((getNext: (current: ReservationCommand[]) => ReservationCommand[]) => {
         setPresent((current) => {
-            const next = normalizeOrders(getNext(current));
+            const next = getNext(current);
             setPast((prevPast) => [...prevPast, current]);
             setFuture([]);
             setIsDirty(true);
@@ -114,7 +110,7 @@ export function useReservationHistory(initialCommands: ReservationCommand[]): Us
 
     const resetCommands = useCallback((newCommands: ReservationCommand[]) => {
         setPast([]);
-        setPresent(normalizeOrders(newCommands));
+        setPresent(newCommands);
         setFuture([]);
         setIsDirty(false);
     }, []);

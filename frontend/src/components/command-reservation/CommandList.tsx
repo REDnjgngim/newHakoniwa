@@ -95,6 +95,7 @@ export const CommandList: React.FC<CommandListProps> = ({
                         >
                             <CommandListItem
                                 command={cmd}
+                                displayOrder={index + 1}
                                 isExpanded={isExpanded}
                                 isFocused={isFocused}
                                 isInsertAbove={isInsertAbove}
