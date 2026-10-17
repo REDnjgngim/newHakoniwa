@@ -26,9 +26,12 @@ export function useReservationHistory(initialCommands: ReservationCommand[]): Us
     const [isDirty, setIsDirty] = useState<boolean>(false);
 
     // 新しい状態への遷移共通関数
+    // 中身が変わらない操作（getNext が current をそのまま返した場合）は
+    // past/future/isDirty を一切触らない（no-opガード）。
     const setNextState = useCallback((getNext: (current: ReservationCommand[]) => ReservationCommand[]) => {
         setPresent((current) => {
             const next = getNext(current);
+            if (next === current) return current;
             setPast((prevPast) => [...prevPast, current]);
             setFuture([]);
             setIsDirty(true);
@@ -38,14 +41,21 @@ export function useReservationHistory(initialCommands: ReservationCommand[]): Us
 
     const updateCommand = useCallback(
         (id: string, partial: Partial<ReservationCommand>) => {
-            setNextState((current) => current.map((cmd) => (cmd.id === id ? { ...cmd, ...partial } : cmd)));
+            setNextState((current) => {
+                if (!current.some((cmd) => cmd.id === id)) return current;
+                return current.map((cmd) => (cmd.id === id ? { ...cmd, ...partial } : cmd));
+            });
         },
         [setNextState]
     );
 
     const deleteCommand = useCallback(
         (id: string) => {
-            setNextState((current) => current.filter((cmd) => cmd.id !== id));
+            setNextState((current) => {
+                const next = current.filter((cmd) => cmd.id !== id);
+                if (next.length === current.length) return current;
+                return next;
+            });
         },
         [setNextState]
     );
