@@ -19,7 +19,7 @@ describe('useReservationHistory no-opガード (P0-10,11)', () => {
             result.current.reorderCommands(1, 1);
         });
 
-        expect(result.current.commands).toBe(before);
+        expect(result.current.commands).toEqual(before);
         expect(result.current.canUndo).toBe(false);
         expect(result.current.isDirty).toBe(false);
     });

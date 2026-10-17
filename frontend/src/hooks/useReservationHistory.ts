@@ -28,16 +28,20 @@ export function useReservationHistory(initialCommands: ReservationCommand[]): Us
     // 新しい状態への遷移共通関数
     // 中身が変わらない操作（getNext が current をそのまま返した場合）は
     // past/future/isDirty を一切触らない（no-opガード）。
-    const setNextState = useCallback((getNext: (current: ReservationCommand[]) => ReservationCommand[]) => {
-        setPresent((current) => {
-            const next = getNext(current);
-            if (next === current) return current;
-            setPast((prevPast) => [...prevPast, current]);
+    // updater の中で別の setState を呼ばない素直な形にするため、
+    // 現在値を直接読んで3つを順に更新する。StrictMode の二重実行でも
+    // 副作用が updater 内にないため冪等になる。
+    const setNextState = useCallback(
+        (getNext: (current: ReservationCommand[]) => ReservationCommand[]) => {
+            const next = getNext(present);
+            if (next === present) return;
+            setPast([...past, present]);
             setFuture([]);
+            setPresent(next);
             setIsDirty(true);
-            return next;
-        });
-    }, []);
+        },
+        [past, present]
+    );
 
     const updateCommand = useCallback(
         (id: string, partial: Partial<ReservationCommand>) => {
@@ -83,36 +87,24 @@ export function useReservationHistory(initialCommands: ReservationCommand[]): Us
     );
 
     const undo = useCallback(() => {
-        setPast((prevPast) => {
-            if (prevPast.length === 0) return prevPast;
-            const previous = prevPast[prevPast.length - 1];
-            if (!previous) return prevPast;
-            const newPast = prevPast.slice(0, prevPast.length - 1);
-
-            setPresent((current) => {
-                setFuture((prevFuture) => [current, ...prevFuture]);
-                return previous;
-            });
-            setIsDirty(true);
-            return newPast;
-        });
-    }, []);
+        if (past.length === 0) return;
+        const previous = past[past.length - 1];
+        if (!previous) return;
+        setPast(past.slice(0, -1));
+        setFuture([present, ...future]);
+        setPresent(previous);
+        setIsDirty(true);
+    }, [past, present, future]);
 
     const redo = useCallback(() => {
-        setFuture((prevFuture) => {
-            if (prevFuture.length === 0) return prevFuture;
-            const next = prevFuture[0];
-            if (!next) return prevFuture;
-            const newFuture = prevFuture.slice(1);
-
-            setPresent((current) => {
-                setPast((prevPast) => [...prevPast, current]);
-                return next;
-            });
-            setIsDirty(true);
-            return newFuture;
-        });
-    }, []);
+        if (future.length === 0) return;
+        const next = future[0];
+        if (!next) return;
+        setFuture(future.slice(1));
+        setPast([...past, present]);
+        setPresent(next);
+        setIsDirty(true);
+    }, [past, present, future]);
 
     const markSaved = useCallback(() => {
         setIsDirty(false);
