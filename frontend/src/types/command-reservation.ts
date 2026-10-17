@@ -7,7 +7,6 @@ export interface Coordinate {
 
 export interface ReservationCommand {
     id: string;
-    order: number;
     commandType: CommandType;
     name: string;
     coordinate?: Coordinate;

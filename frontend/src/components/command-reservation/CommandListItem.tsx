@@ -4,6 +4,8 @@ import { TerrainIcon } from './TerrainIcon';
 
 export interface CommandListItemProps {
     command: ReservationCommand;
+    /** 表示番号（= index+1）。内部に order は持たないため描画時に渡す */
+    displayOrder: number;
     isExpanded: boolean;
     isFocused: boolean;
     isInsertAbove?: boolean;
@@ -26,6 +28,7 @@ export interface CommandListItemProps {
 
 export const CommandListItem: React.FC<CommandListItemProps> = ({
     command,
+    displayOrder,
     isExpanded,
     isFocused,
     isInsertAbove = false,
@@ -40,7 +43,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
     dragHandleProps,
 }) => {
     const isFast = command.commandType === 'fast';
-    const orderFormatted = String(command.order).padStart(2, '0');
+    const orderFormatted = String(displayOrder).padStart(2, '0');
 
     // 2行目: 数量・パラメータ情報（表示優先のため summaryText をそのまま出す）
     const detailLine = command.summaryText?.trim() ? command.summaryText : null;
