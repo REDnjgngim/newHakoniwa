@@ -1,4 +1,5 @@
 node_modules
-.agent/
+.agents/
 .cursor/
 document/
+AGENTS.md
