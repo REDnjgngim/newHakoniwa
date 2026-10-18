@@ -1,31 +1,31 @@
 import Select, { type SingleValue } from 'react-select';
 
-export interface IslandSearchOption {
+export type IslandSearchOption = {
     value: string;
     label: string;
-}
+};
 
-interface IslandSearchSelectProps {
+type IslandSearchSelectProps = {
     label: string;
     options: IslandSearchOption[];
     value: string | null;
     onChange: (value: string) => void;
     commandId: string;
     labelSuffix?: string;
-}
+};
 
 /**
  * 島・アイテム・艦隊選択用の検索付きドロップダウン。
  * react-select (unstyled + Tailwind classNames) のラッパー。
  */
-export const IslandSearchSelect: React.FC<IslandSearchSelectProps> = ({
+export function IslandSearchSelect({
     label,
     options,
     value,
     onChange,
     commandId,
     labelSuffix,
-}) => {
+}: IslandSearchSelectProps) {
     const inputId = `island-search-${commandId}${labelSuffix ? `-${labelSuffix}` : ''}`;
     const selectedOption: SingleValue<IslandSearchOption> =
         options.find((opt) => opt.value === value || opt.label === value) ?? null;
@@ -74,4 +74,4 @@ export const IslandSearchSelect: React.FC<IslandSearchSelectProps> = ({
             </div>
         </div>
     );
-};
+}

@@ -6,16 +6,16 @@ import { clamp } from '../geometry';
 // 計測結果は丸めて上限を適用し、初回計測かどうかを合わせて通知する。
 // ============================================================================
 
-export interface ElementSize {
+export type ElementSize = {
     width: number;
     height: number;
     isFirst: boolean;
-}
+};
 
-export interface ElementSizeLimits {
+export type ElementSizeLimits = {
     maxWidth: number;
     maxHeight: number;
-}
+};
 
 export function useElementSize<E extends HTMLElement>(
     ref: RefObject<E | null>,

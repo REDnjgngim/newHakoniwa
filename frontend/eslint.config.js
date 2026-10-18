@@ -76,11 +76,11 @@ export default [
         files: ['src/**/*.{ts,tsx}'],
         ignores: ['src/**/*.test.{ts,tsx}', 'src/test/**'],
         rules: {
-            '@typescript-eslint/consistent-type-definitions': ['warn', 'type'],
-            '@typescript-eslint/consistent-type-assertions': ['warn', { assertionStyle: 'never' }],
-            '@typescript-eslint/no-non-null-assertion': 'warn',
+            '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
+            '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+            '@typescript-eslint/no-non-null-assertion': 'error',
             'no-restricted-syntax': [
-                'warn',
+                'error',
                 {
                     selector: 'ExportDefaultDeclaration',
                     message: 'export default は使わず、名前付きエクスポートにする。',

@@ -7,17 +7,17 @@ import type { AnimationLoopController, OnSelectTile, TileCoord } from '../types'
 // カーソル演出（パルス）の開始をまとめて行う。
 // ============================================================================
 
-export interface TileSelectionParams {
+export type TileSelectionParams = {
     selectedTileRef: RefObject<TileCoord | null>;
     cursorAnimStartRef: RefObject<number>;
     cursorLoop: AnimationLoopController;
     terrain_grid: SectorTerrainData['terrain_grid'];
     onSelect?: OnSelectTile;
-}
+};
 
-export interface TileSelectionResult {
+export type TileSelectionResult = {
     handleTileConfirm: (tile: TileCoord) => void;
-}
+};
 
 export function useTileSelection(params: TileSelectionParams): TileSelectionResult {
     const { selectedTileRef, cursorAnimStartRef, cursorLoop, terrain_grid, onSelect } = params;

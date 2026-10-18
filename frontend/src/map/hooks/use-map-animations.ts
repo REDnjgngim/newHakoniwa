@@ -8,19 +8,19 @@ import { useAnimationLoop } from './use-animation-loop';
 // （handleHoverChange）も担い、呼び出し側の loop ref + 同期 useEffect を不要にする。
 // ============================================================================
 
-export interface MapAnimationsParams {
+export type MapAnimationsParams = {
     selectedTileRef: RefObject<TileCoord | null>;
     hoverFadeStartRef: RefObject<number>;
     hoverStateRef: RefObject<HoverState>;
     fadeDurationMs: number;
     renderOverlay: () => void;
-}
+};
 
-export interface MapAnimationsResult {
+export type MapAnimationsResult = {
     cursorLoop: AnimationLoopController;
     hoverFadeLoop: AnimationLoopController;
     handleHoverChange: () => void;
-}
+};
 
 export function useMapAnimations(params: MapAnimationsParams): MapAnimationsResult {
     const { selectedTileRef, hoverFadeStartRef, hoverStateRef, fadeDurationMs, renderOverlay } = params;

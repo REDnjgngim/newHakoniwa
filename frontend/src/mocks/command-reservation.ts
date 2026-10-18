@@ -1,9 +1,9 @@
 import type { ReservationCommand } from '../types/command-reservation';
 
-export interface IslandOption {
+export type IslandOption = {
     id: string;
     name: string;
-}
+};
 
 export const mockIslands: IslandOption[] = [
     { id: 'island-1', name: 'Neptune島' },

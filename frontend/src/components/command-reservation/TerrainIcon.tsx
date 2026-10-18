@@ -1,13 +1,12 @@
-import React from 'react';
 import { TERRAIN_IMAGE_MAP } from '../../constants/terrain';
 import { sectorTerrain } from '../../mocks/sector-terrain';
 import { getTerrainTypeAt } from '../../map/terrain-lookup';
 import type { Coordinate } from '../../types/command-reservation';
 
-export interface TerrainIconProps {
+export type TerrainIconProps = {
     coordinate?: Coordinate;
     size?: number;
-}
+};
 
 const TERRAIN_LABEL: Record<string, string> = {
     sea: '海',
@@ -18,7 +17,7 @@ const TERRAIN_LABEL: Record<string, string> = {
 };
 
 /** コマンド座標の地形をマップと同じ画像で表示する */
-export const TerrainIcon: React.FC<TerrainIconProps> = ({ coordinate, size = 20 }) => {
+export function TerrainIcon({ coordinate, size = 20 }: TerrainIconProps) {
     if (!coordinate) return null;
     const terrainType = getTerrainTypeAt(sectorTerrain, coordinate);
     if (!terrainType) return null;
@@ -35,4 +34,4 @@ export const TerrainIcon: React.FC<TerrainIconProps> = ({ coordinate, size = 20 
             style={{ width: size, height: size, imageRendering: 'pixelated' }}
         />
     );
-};
+}

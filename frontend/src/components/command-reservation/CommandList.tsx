@@ -1,10 +1,10 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import type { ReservationCommand } from '../../types/command-reservation';
 import { CommandListItem } from './CommandListItem';
 import { CommandDetailEditor } from './CommandDetailEditor';
 import { useCommandReorder } from '../../hooks/useCommandReorder';
 
-export interface CommandListProps {
+export type CommandListProps = {
     commands: ReservationCommand[];
     expandedIds: Set<string>;
     focusedId: string | null;
@@ -13,9 +13,9 @@ export interface CommandListProps {
     onUpdateCommand: (id: string, partial: Partial<ReservationCommand>) => void;
     onDeleteCommand: (id: string) => void;
     onReorderCommands: (fromIndex: number, toIndex: number) => void;
-}
+};
 
-export const CommandList: React.FC<CommandListProps> = ({
+export function CommandList({
     commands,
     expandedIds,
     focusedId,
@@ -24,7 +24,7 @@ export const CommandList: React.FC<CommandListProps> = ({
     onUpdateCommand,
     onDeleteCommand,
     onReorderCommands,
-}) => {
+}: CommandListProps) {
     const viewportRef = useRef<HTMLDivElement | null>(null);
     const {
         draggingIndex,
@@ -125,4 +125,4 @@ export const CommandList: React.FC<CommandListProps> = ({
             )}
         </div>
     );
-};
+}

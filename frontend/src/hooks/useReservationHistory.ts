@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { ReservationCommand } from '../types/command-reservation';
 
-export interface UseReservationHistoryReturn {
+export type UseReservationHistoryReturn = {
     commands: ReservationCommand[];
     updateCommand: (id: string, partial: Partial<ReservationCommand>) => void;
     deleteCommand: (id: string) => void;
@@ -13,7 +13,7 @@ export interface UseReservationHistoryReturn {
     isDirty: boolean;
     markSaved: () => void;
     resetCommands: (newCommands: ReservationCommand[]) => void;
-}
+};
 
 export function useReservationHistory(initialCommands: ReservationCommand[]): UseReservationHistoryReturn {
     // 3スタック（past, present, future）方式による履歴管理

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { ReservationCommand, TabType } from '../../types/command-reservation';
 import { mockReservationCommands } from '../../mocks/command-reservation';
 import { useReservationHistory } from '../../hooks/useReservationHistory';
@@ -8,15 +8,15 @@ import { CommandList } from './CommandList';
 import { PanelFooter } from './PanelFooter';
 import { ToastNotification } from './ToastNotification';
 
-export interface CommandReservationPanelProps {
+export type CommandReservationPanelProps = {
     initialCommands?: ReservationCommand[];
     onSelectCommand?: (command: ReservationCommand | null) => void;
-}
+};
 
-export const CommandReservationPanel: React.FC<CommandReservationPanelProps> = ({
+export function CommandReservationPanel({
     initialCommands = mockReservationCommands,
     onSelectCommand,
-}) => {
+}: CommandReservationPanelProps) {
     const { commands, updateCommand, deleteCommand, reorderCommands, undo, redo, canUndo, canRedo, markSaved } =
         useReservationHistory(initialCommands);
     // タブ選択状態（デフォルト「予約」）
@@ -124,6 +124,4 @@ export const CommandReservationPanel: React.FC<CommandReservationPanelProps> = (
             )}
         </BottomSheetContainer>
     );
-};
-
-export default CommandReservationPanel;
+}

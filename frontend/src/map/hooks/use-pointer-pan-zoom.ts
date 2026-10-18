@@ -7,7 +7,7 @@ import type { PanLimitMode, PinchState, PointerPanZoomResult, ViewState } from '
 // view は呼び出し側が保持する ref を直接書き換え、変化のたびに onChange（再描画）を呼ぶ。
 // ============================================================================
 
-export interface PointerPanZoomSettings {
+export type PointerPanZoomSettings = {
     dragThresholdPx: number;
     minScale: number;
     maxScale: number;
@@ -16,7 +16,7 @@ export interface PointerPanZoomSettings {
     tileSize: number;
     panLimitMode: PanLimitMode;
     canvasSize: RefObject<{ width: number; height: number }>;
-}
+};
 
 // マップが完全に画面外へ消えないよう、パン・ズーム後の view を制限する
 function applyPanLimit(view: ViewState, settings: PointerPanZoomSettings): ViewState {

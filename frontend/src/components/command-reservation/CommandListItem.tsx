@@ -1,8 +1,8 @@
-import React from 'react';
+import type { DragEventHandler, HTMLAttributes, ReactNode } from 'react';
 import type { ReservationCommand } from '../../types/command-reservation';
 import { TerrainIcon } from './TerrainIcon';
 
-export interface CommandListItemProps {
+export type CommandListItemProps = {
     command: ReservationCommand;
     /** 表示番号（= index+1）。内部に order は持たないため描画時に渡す */
     displayOrder: number;
@@ -15,18 +15,18 @@ export interface CommandListItemProps {
     /** 直後が同じ種別（青色同士など）の場合に連結表示する */
     isConnectedToNext?: boolean;
     /** 展開時に中央列へ埋め込む詳細編集コンテンツ */
-    detailContent?: React.ReactNode;
+    detailContent?: ReactNode;
     onToggleExpand: () => void;
     onSelect: () => void;
     onDelete: () => void;
     onStackClick?: () => void;
-    dragHandleProps?: React.HTMLAttributes<HTMLDivElement> & {
+    dragHandleProps?: HTMLAttributes<HTMLDivElement> & {
         draggable?: boolean;
-        onDragStart?: React.DragEventHandler<HTMLDivElement>;
+        onDragStart?: DragEventHandler<HTMLDivElement>;
     };
-}
+};
 
-export const CommandListItem: React.FC<CommandListItemProps> = ({
+export function CommandListItem({
     command,
     displayOrder,
     isExpanded,
@@ -41,7 +41,7 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
     onDelete,
     onStackClick,
     dragHandleProps,
-}) => {
+}: CommandListItemProps) {
     const isFast = command.commandType === 'fast';
     const orderFormatted = String(displayOrder).padStart(2, '0');
 
@@ -225,4 +225,4 @@ export const CommandListItem: React.FC<CommandListItemProps> = ({
             </div>
         </div>
     );
-};
+}

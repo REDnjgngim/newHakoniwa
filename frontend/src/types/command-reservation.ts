@@ -1,11 +1,11 @@
 export type CommandType = 'normal' | 'fast';
 
-export interface Coordinate {
+export type Coordinate = {
     x: number;
     y: number;
-}
+};
 
-export interface ReservationCommand {
+export type ReservationCommand = {
     id: string;
     commandType: CommandType;
     name: string;
@@ -16,7 +16,7 @@ export interface ReservationCommand {
     estimatedTurn: number;
     estimatedFundsDelta: number;
     params?: Record<string, string | number | boolean>;
-}
+};
 
 /** コマンドの詳細フィールドパターン */
 export type CommandDetailPattern =

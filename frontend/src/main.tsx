@@ -3,11 +3,11 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import { sectorTerrain } from './mocks/sector-terrain';
 import { mockIslandStatus } from './mocks/island-status';
-import HeaderStatusBar from './components/header/header-status-bar';
-import HexMapPreview from './components/hex-map/hex-map-preview';
-import Inspector from './components/inspector/Inspector';
-import InspectorFrame from './components/inspector/InspectorFrame';
-import CommandReservationPanel from './components/command-reservation/CommandReservationPanel';
+import { HeaderStatusBar } from './components/header/header-status-bar';
+import { HexMapPreview } from './components/hex-map/hex-map-preview';
+import { Inspector } from './components/inspector/Inspector';
+import { InspectorFrame } from './components/inspector/InspectorFrame';
+import { CommandReservationPanel } from './components/command-reservation/CommandReservationPanel';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('ルート要素(#root)が見つかりません');

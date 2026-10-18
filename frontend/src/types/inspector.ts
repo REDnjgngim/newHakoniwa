@@ -1,6 +1,6 @@
 export type InspectorType = 'map' | 'command-list' | 'island-info' | 'log';
 
-export interface InspectorProps {
+export type InspectorProps = {
     id: string;
     type: InspectorType;
-}
+};

@@ -6,11 +6,11 @@ import type { ReactNode } from 'react';
 // 今回は Inspector を 1 個だけ持ち、canvas は画面いっぱい（full viewport）に広がる。
 // ============================================================================
 
-interface InspectorFrameProps {
+type InspectorFrameProps = {
     children?: ReactNode;
-}
+};
 
-export default function InspectorFrame({ children }: InspectorFrameProps) {
+export function InspectorFrame({ children }: InspectorFrameProps) {
     return (
         <div className="fixed inset-0 flex flex-col overflow-hidden bg-slate-950 md:flex-row">
             {/* PC時の左右余白用サイバー背景（青強め・マップ裏ではなく画面全体の土台） */}

@@ -1,12 +1,12 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 
-export interface UseBottomSheetReturn {
+export type UseBottomSheetReturn = {
     sheetHeightVh: number;
     isSheetHidden: boolean;
     isDraggingSheet: boolean;
-    snapHeightStyle: React.CSSProperties;
-    handleDragHandlePointerDown: (event: React.PointerEvent) => void;
-}
+    snapHeightStyle: CSSProperties;
+    handleDragHandlePointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
+};
 
 const MIN_SHEET_VH = 2.5;
 const MAX_SHEET_VH = 96;
@@ -32,9 +32,9 @@ export function useBottomSheet(): UseBottomSheetReturn {
     }, []);
 
     const handleDragHandlePointerDown = useCallback(
-        (event: React.PointerEvent) => {
+        (event: ReactPointerEvent<HTMLElement>) => {
             if (event.pointerType === 'mouse' && event.button !== 0) return;
-            const sourceElement = (event.currentTarget as HTMLElement | null) ?? null;
+            const sourceElement = event.currentTarget;
             try {
                 sourceElement?.setPointerCapture?.(event.pointerId);
             } catch {
@@ -78,7 +78,7 @@ export function useBottomSheet(): UseBottomSheetReturn {
 
     const isSheetHidden = sheetHeightVh <= HIDDEN_THRESHOLD_VH;
 
-    const snapHeightStyle: React.CSSProperties = {
+    const snapHeightStyle: CSSProperties = {
         height: `${sheetHeightVh}dvh`,
         maxHeight: `${MAX_SHEET_VH}dvh`,
         transition: isDraggingSheet ? 'none' : 'height 0.15s ease-out',

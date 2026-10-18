@@ -1,12 +1,11 @@
-import React from 'react';
 import type { TabType } from '../../types/command-reservation';
 
-export interface PanelTabBarProps {
+export type PanelTabBarProps = {
     activeTab: TabType;
     onChangeTab: (tab: TabType) => void;
-}
+};
 
-export const PanelTabBar: React.FC<PanelTabBarProps> = ({ activeTab, onChangeTab }) => {
+export function PanelTabBar({ activeTab, onChangeTab }: PanelTabBarProps) {
     const tabs: { key: TabType; label: string }[] = [
         { key: 'reservation', label: '予約' },
         { key: 'log', label: 'ログ' },
@@ -39,4 +38,4 @@ export const PanelTabBar: React.FC<PanelTabBarProps> = ({ activeTab, onChangeTab
             })}
         </div>
     );
-};
+}

@@ -1,18 +1,13 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 
-export interface ToastNotificationProps {
+export type ToastNotificationProps = {
     message: string;
     isVisible: boolean;
     onClose: () => void;
     durationMs?: number;
-}
+};
 
-export const ToastNotification: React.FC<ToastNotificationProps> = ({
-    message,
-    isVisible,
-    onClose,
-    durationMs = 3000,
-}) => {
+export function ToastNotification({ message, isVisible, onClose, durationMs = 3000 }: ToastNotificationProps) {
     useEffect(() => {
         if (!isVisible) return;
         const timer = setTimeout(() => {
@@ -34,4 +29,4 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
             <span>{message}</span>
         </div>
     );
-};
+}

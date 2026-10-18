@@ -1,13 +1,12 @@
-import React from 'react';
 import type { CommandDetailPattern, ReservationCommand } from '../../types/command-reservation';
 import { mockFleets, mockIslands, mockItems } from '../../mocks/command-reservation';
 import { IslandSearchSelect } from './IslandSearchSelect';
 import { TerrainIcon } from './TerrainIcon';
 
-export interface CommandDetailEditorProps {
+export type CommandDetailEditorProps = {
     command: ReservationCommand;
     onUpdate: (updatedCommand: ReservationCommand) => void;
-}
+};
 
 function detectPattern(command: ReservationCommand): CommandDetailPattern {
     const p = command.params ?? {};
@@ -80,7 +79,7 @@ function getSliderDisplayValue(pattern: CommandDetailPattern, sliderValue: numbe
     }
     return `${sliderValue}`;
 }
-export const CommandDetailEditor: React.FC<CommandDetailEditorProps> = ({ command, onUpdate }) => {
+export function CommandDetailEditor({ command, onUpdate }: CommandDetailEditorProps) {
     const pattern = detectPattern(command);
     const sliderValue = getSliderValue(pattern, command);
     const params = command.params ?? {};
@@ -238,7 +237,7 @@ export const CommandDetailEditor: React.FC<CommandDetailEditorProps> = ({ comman
             </div>
         </div>
     );
-};
+}
 
 function HeaderRow({
     command,

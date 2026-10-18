@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { resolveMapSettings, type HexMapPreviewProps } from '../../map';
-import CanvasMap from './canvas-map';
+import { CanvasMap } from './canvas-map';
 
 // ============================================================================
 // マップ描画のエントリコンポーネント。
@@ -8,7 +8,7 @@ import CanvasMap from './canvas-map';
 // UI配置用の9:16不可視論理枠はこのマップパネル基準で中央配置する。
 // ============================================================================
 
-export default function HexMapPreview({ sector, settings, terrainImages, onSelect }: HexMapPreviewProps) {
+export function HexMapPreview({ sector, settings, terrainImages, onSelect }: HexMapPreviewProps) {
     const resolved = useMemo(
         () => resolveMapSettings({ sector, settings, terrainImages, onSelect }),
         [sector, settings, terrainImages, onSelect]

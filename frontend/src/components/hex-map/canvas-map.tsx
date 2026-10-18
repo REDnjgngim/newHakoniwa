@@ -19,13 +19,13 @@ import type { HoverState, OnSelectTile, ResolvedMapSettings, ViewState } from '.
 // セクター地形データと解決済み設定をpropsで受け取り、モックデータを直接参照しない。
 // ============================================================================
 
-export interface CanvasMapProps {
+export type CanvasMapProps = {
     sector: SectorTerrainData;
     settings: ResolvedMapSettings;
     onSelect?: OnSelectTile;
-}
+};
 
-function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
+export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -204,5 +204,3 @@ function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         </div>
     );
 }
-
-export default CanvasMap;

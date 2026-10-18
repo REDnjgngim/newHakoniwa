@@ -1,11 +1,11 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { useBottomSheet } from '../../hooks/useBottomSheet';
 
-export interface BottomSheetContainerProps {
-    children: React.ReactNode;
-}
+export type BottomSheetContainerProps = {
+    children: ReactNode;
+};
 
-export const BottomSheetContainer: React.FC<BottomSheetContainerProps> = ({ children }) => {
+export function BottomSheetContainer({ children }: BottomSheetContainerProps) {
     const { sheetHeightVh, isSheetHidden, handleDragHandlePointerDown, isDraggingSheet, snapHeightStyle } =
         useBottomSheet();
 
@@ -42,4 +42,4 @@ export const BottomSheetContainer: React.FC<BottomSheetContainerProps> = ({ chil
             </div>
         </div>
     );
-};
+}

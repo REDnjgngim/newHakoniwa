@@ -21,7 +21,7 @@ function formatNumber(value: number): string {
     return value.toLocaleString('en-US');
 }
 
-export default function HeaderStatusBar({ status = mockIslandStatus, className = '' }: HeaderStatusBarProps) {
+export function HeaderStatusBar({ status = mockIslandStatus, className = '' }: HeaderStatusBarProps) {
     const [expanded, setExpanded] = useSessionState(SESSION_KEY, false);
 
     const toggle = () => setExpanded((prev) => !prev);

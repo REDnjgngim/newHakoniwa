@@ -1,22 +1,13 @@
-import React from 'react';
-
-export interface PanelFooterProps {
+export type PanelFooterProps = {
     canUndo: boolean;
     canRedo: boolean;
     onUndo: () => void;
     onRedo: () => void;
     onToggleAllAccordion: () => void;
     onSubmit: () => void;
-}
+};
 
-export const PanelFooter: React.FC<PanelFooterProps> = ({
-    canUndo,
-    canRedo,
-    onUndo,
-    onRedo,
-    onToggleAllAccordion,
-    onSubmit,
-}) => {
+export function PanelFooter({ canUndo, canRedo, onUndo, onRedo, onToggleAllAccordion, onSubmit }: PanelFooterProps) {
     return (
         <div
             data-testid="panel-footer"
@@ -77,4 +68,4 @@ export const PanelFooter: React.FC<PanelFooterProps> = ({
             </div>
         </div>
     );
-};
+}

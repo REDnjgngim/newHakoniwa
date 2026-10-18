@@ -7,7 +7,7 @@ import type { PanLimitMode, ViewState } from '../types';
 // コンテナへ wheel リスナーを登録し、カーソル位置を中心に倍率を変更する。
 // ============================================================================
 
-export interface WheelZoomSettings {
+export type WheelZoomSettings = {
     wheelZoomFactor: number;
     minScale: number;
     maxScale: number;
@@ -16,7 +16,7 @@ export interface WheelZoomSettings {
     tileSize: number;
     panLimitMode: PanLimitMode;
     canvasSize: RefObject<{ width: number; height: number }>;
-}
+};
 
 export function useWheelZoom<E extends HTMLElement>(
     containerRef: RefObject<E | null>,

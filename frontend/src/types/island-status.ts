@@ -3,7 +3,7 @@
 // 常時表示情報と展開時詳細情報を1つのインターフェースにまとめる。
 // ============================================================================
 
-export interface IslandStatus {
+export type IslandStatus = {
     // 常時表示情報
     turn: number;
     timeToNextTurn: string; // 例: "0:45:12"
@@ -18,9 +18,9 @@ export interface IslandStatus {
     factory: number; // 工場規模（人）
     mine: number; // 採掘場規模（人）
     unemployed: number; // 失業人数（人）
-}
+};
 
-export interface HeaderStatusBarProps {
+export type HeaderStatusBarProps = {
     status?: IslandStatus;
     className?: string;
-}
+};

@@ -7,12 +7,12 @@ import type { InspectorProps } from '../../types/inspector';
 // 今回は InspectorFrame 内を埋める 1 個だけを使う。
 // ============================================================================
 
-export interface InspectorComponentProps extends InspectorProps {
+export type InspectorComponentProps = {
     children?: ReactNode;
     className?: string;
-}
+} & InspectorProps;
 
-export default function Inspector({ id, type, children, className = '' }: InspectorComponentProps) {
+export function Inspector({ id, type, children, className = '' }: InspectorComponentProps) {
     return (
         <div
             data-inspector-id={id}

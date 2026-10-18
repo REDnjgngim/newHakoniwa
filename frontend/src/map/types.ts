@@ -2,24 +2,24 @@ import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
 import type { SectorTerrainData, TerrainCell, TerrainType } from '../types/terrain';
 
 // マップ表示・描画設定の型定義
-export interface MapRenderOptions {
+export type MapRenderOptions = {
     /** 画像のスムージング（falseでドット絵をくっきり表示） */
     imageSmoothing: boolean;
     /** サブピクセル描画によるタイルの隙間を防ぐ微小オーバーラップ（px） */
     overlapPx: number;
-}
+};
 
 // マップ領域の配色（背景・枠線・地形画像が未ロードのときの代替配色）
-export interface MapTheme {
+export type MapTheme = {
     background?: string;
     border: string;
     fallbackBg: string;
     fallbackBorder: string;
     /** 12×12 グリッド外周のベタ塗り色 */
     outerSea: string;
-}
+};
 
-export interface MapConfig {
+export type MapConfig = {
     tileSize: number;
     initialScale: number;
     minScale: number;
@@ -34,10 +34,10 @@ export interface MapConfig {
     panLimitMode: PanLimitMode;
     theme: MapTheme;
     renderOptions: MapRenderOptions;
-}
+};
 
 // 座標ラベルの描画設定
-export interface OverlayLabelConfig {
+export type OverlayLabelConfig = {
     fontFamily: string;
     baseFontSize: number;
     minFontSize: number;
@@ -51,20 +51,20 @@ export interface OverlayLabelConfig {
     shadowOffsetRatio: number;
     glyphScaleY: number;
     edgeInsetPx: number;
-}
+};
 
 // ホバー中のマスを示すガイドラインの描画設定
-export interface HoverGridConfig {
+export type HoverGridConfig = {
     lineColor: string;
     baseLineWidth: number;
     minLineWidth: number;
     maxLineWidth: number;
     lineWidthScaleExponent: number;
     fadeDurationMs: number;
-}
+};
 
 // 選択中タイルを示す角ブラケットカーソルの描画設定
-export interface CornerCursorConfig {
+export type CornerCursorConfig = {
     intervalMs: number;
     pulseDurationMs: number;
     bracketLenRatio: number;
@@ -74,57 +74,57 @@ export interface CornerCursorConfig {
     outlineColor: string;
     baseScale: number;
     peakScale: number;
-}
+};
 
 // パン範囲の制限方式。'clamp' は最外周タイルの中心が canvas 中央を跨いで
 // 画面外へ出ないよう offset を制限する
 export type PanLimitMode = 'none' | 'clamp';
 
 // 12×12 グリッドの外枠を囲む境界ラインの描画設定
-export interface BoundaryLineConfig {
+export type BoundaryLineConfig = {
     color: string;
     lineWidth: number;
     glowColor: string;
     glowBlur: number;
-}
+};
 
 // マス座標（0始まり）
-export interface TileCoord {
+export type TileCoord = {
     x: number;
     y: number;
-}
+};
 
-export interface ViewState {
+export type ViewState = {
     offsetX: number;
     offsetY: number;
     scale: number;
-}
+};
 
-export interface TileRange {
+export type TileRange = {
     colStart: number;
     colEnd: number;
     rowStart: number;
     rowEnd: number;
     tileSize: number;
-}
+};
 
 // ラベル描画用の表示範囲（描画用の余剰マスは含めない）
-export interface LabelRange {
+export type LabelRange = {
     colStart: number;
     colEnd: number;
     rowStart: number;
     rowEnd: number;
-}
+};
 
 // ============================================================================
 // 公開API（呼び出し側が注入するデータ・通知）
 // ============================================================================
 
 // 選択確定の通知内容（座標とセル情報の両方を渡す）
-export interface MapSelection {
+export type MapSelection = {
     coord: TileCoord;
     cell: TerrainCell;
-}
+};
 
 export type OnSelectTile = (selection: MapSelection) => void;
 
@@ -132,12 +132,12 @@ export type OnSelectTile = (selection: MapSelection) => void;
 export type TerrainImageMap = Partial<Record<TerrainType, string>>;
 
 // エントリコンポーネントのprops（外部から差し替え可能な入力）
-export interface HexMapPreviewProps {
+export type HexMapPreviewProps = {
     sector: SectorTerrainData;
     settings?: MapSettingsInput;
     terrainImages?: TerrainImageMap;
     onSelect?: OnSelectTile;
-}
+};
 
 // ============================================================================
 // 設定の部分上書きと、既定値で解決した後の設定
@@ -145,23 +145,23 @@ export interface HexMapPreviewProps {
 
 export type DeepPartial<T> = { [Key in keyof T]?: T[Key] extends object ? DeepPartial<T[Key]> : T[Key] };
 
-export interface MapSettingsInput {
+export type MapSettingsInput = {
     view?: DeepPartial<MapConfig>;
     label?: Partial<OverlayLabelConfig>;
     hoverGrid?: Partial<HoverGridConfig>;
     cornerCursor?: Partial<CornerCursorConfig>;
     boundaryLine?: Partial<BoundaryLineConfig>;
-}
+};
 
 // 既定値と注入値をマージし終えた設定（描画側はこれだけを参照する）
-export interface ResolvedMapSettings {
+export type ResolvedMapSettings = {
     view: MapConfig;
     label: OverlayLabelConfig;
     hoverGrid: HoverGridConfig;
     cornerCursor: CornerCursorConfig;
     boundaryLine: BoundaryLineConfig;
     images: TerrainImageMap;
-}
+};
 
 // ============================================================================
 // フックの入出力型
@@ -171,18 +171,18 @@ export interface ResolvedMapSettings {
 export type HoverCell = TileCoord;
 
 // ホバー中の状態。未ホバー時は x / y に null が入る
-export interface HoverState {
+export type HoverState = {
     x: number | null;
     y: number | null;
-}
+};
 
 // ポインターイベントの要素内ローカル座標（CSS px）
-export interface PointerLocalPosition {
+export type PointerLocalPosition = {
     x: number;
     y: number;
-}
+};
 
-export interface HoverTrackingResult<E extends HTMLElement> {
+export type HoverTrackingResult<E extends HTMLElement> = {
     // ホバー状態を設定する（同一セルなら再描画しない）
     setHover: (next: HoverState) => void;
     // ホバーを解除する
@@ -197,25 +197,25 @@ export interface HoverTrackingResult<E extends HTMLElement> {
     handlePointerLeaveForHover: (event?: ReactPointerEvent<E>) => void;
     // pointerup 用: ホバー中と同一セルなら onConfirm、別セルならホバー移動のみ
     handleTapForHover: (event: ReactPointerEvent<E>, onConfirm: (cell: HoverCell) => void) => void;
-}
+};
 
-export interface PointerPanZoomResult<E extends HTMLElement> {
+export type PointerPanZoomResult<E extends HTMLElement> = {
     handlePointerDown: (event: ReactPointerEvent<E>) => void;
     handlePointerMove: (event: ReactPointerEvent<E>) => void;
     handlePointerUp: (event: ReactPointerEvent<E>) => void;
     isDraggingRef: RefObject<boolean>;
-}
+};
 
 // ピンチ開始時の表示状態と2本指の中心（開始時を基準に計算する）
-export interface PinchState {
+export type PinchState = {
     view: ViewState;
     startDist: number;
     centerX: number;
     centerY: number;
-}
+};
 
-export interface AnimationLoopController {
+export type AnimationLoopController = {
     start: () => void;
     stop: () => void;
     isRunning: () => boolean;
-}
+};

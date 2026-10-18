@@ -1,23 +1,31 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+    type DragEvent as ReactDragEvent,
+    type PointerEvent as ReactPointerEvent,
+    type RefObject,
+} from 'react';
 
-export interface UseCommandReorderOptions {
+export type UseCommandReorderOptions = {
     itemCount: number;
-    viewportElementRef: React.RefObject<HTMLElement | null>;
+    viewportElementRef: RefObject<HTMLElement | null>;
     onReorder: (fromIndex: number, toIndex: number) => void;
-}
+};
 
-export interface UseCommandReorderReturn {
+export type UseCommandReorderReturn = {
     draggingIndex: number | null;
     dragOverIndex: number | null;
     dragOffsetY: number;
     isPointerDragging: boolean;
     handleHtml5DragStart: (index: number) => void;
-    handleHtml5DragOver: (event: React.DragEvent, index: number) => void;
+    handleHtml5DragOver: (event: ReactDragEvent, index: number) => void;
     handleHtml5DragEnd: () => void;
-    handlePointerDown: (event: React.PointerEvent, index: number) => void;
-}
+    handlePointerDown: (event: ReactPointerEvent<HTMLElement>, index: number) => void;
+};
 
-interface PointerDragState {
+type PointerDragState = {
     pointerId: number;
     startIndex: number;
     startClientY: number;
@@ -27,7 +35,7 @@ interface PointerDragState {
     activated: boolean;
     grabOffsetY: number; // 追加: PointerDown時の行先頭からの相対Y
     sourceElement: HTMLElement | null;
-}
+};
 
 const AUTO_SCROLL_MARGIN_PX = 56;
 const AUTO_SCROLL_STEP_PX = 8;
@@ -68,7 +76,8 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
                 if (!Number.isInteger(parsed) || parsed < 0 || parsed >= itemCount) return;
                 if (excludeIndex !== null && parsed === excludeIndex) return;
                 seen += 1;
-                const rect = (row as HTMLElement).getBoundingClientRect();
+                const rect = row instanceof HTMLElement ? row.getBoundingClientRect() : null;
+                if (rect === null) return;
                 const mid = rect.top + rect.height / 2;
                 if (clientY >= mid) insertAt += 1;
             });
@@ -87,7 +96,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
         setIsPointerDragging(false);
     }, []);
 
-    const handleHtml5DragOver = useCallback((event: React.DragEvent, index: number) => {
+    const handleHtml5DragOver = useCallback((event: ReactDragEvent, index: number) => {
         event.preventDefault();
         setDragOverIndex(index);
     }, []);
@@ -116,12 +125,12 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
         },
         [viewportRef]
     );
-    const handlePointerDown = useCallback((event: React.PointerEvent, index: number) => {
+    const handlePointerDown = useCallback((event: ReactPointerEvent<HTMLElement>, index: number) => {
         if (event.pointerType === 'mouse') return;
-        const target = event.target as HTMLElement | null;
+        const target = event.target instanceof HTMLElement ? event.target : null;
         if (target?.closest('button, select, input, textarea, a')) return;
         const isHandle = target?.closest('[data-drag-handle]') !== null;
-        const sourceElement = (event.currentTarget as HTMLElement | null) ?? null;
+        const sourceElement = event.currentTarget;
         // ハンドル起点のみドラッグ開始。行本体の長押し開始は廃止。
         if (!isHandle) {
             return; // ハンドル以外の操作は無視

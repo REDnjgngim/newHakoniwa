@@ -15,7 +15,7 @@ import { useTerrainImages } from './use-terrain-images';
 // このフック内部で完結させ、呼び出し側の renderRef を不要にする。
 // ============================================================================
 
-export interface MapRendererParams {
+export type MapRendererParams = {
     canvasRef: RefObject<HTMLCanvasElement | null>;
     overlayCanvasRef: RefObject<HTMLCanvasElement | null>;
     sizeRef: RefObject<{ width: number; height: number }>;
@@ -26,13 +26,13 @@ export interface MapRendererParams {
     cursorAnimStartRef: RefObject<number>;
     sector: SectorTerrainData;
     settings: ResolvedMapSettings;
-}
+};
 
-export interface MapRendererResult {
+export type MapRendererResult = {
     render: () => void;
     renderOverlay: () => void;
     renderAll: () => void;
-}
+};
 
 export function useMapRenderer(params: MapRendererParams): MapRendererResult {
     const {
