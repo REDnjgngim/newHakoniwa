@@ -9,7 +9,7 @@ function makeCommands(): ReservationCommand[] {
     ];
 }
 
-describe('useReservationHistory undo/redo (P0-15,16,17,14)', () => {
+describe('useReservationHistory undo/redo', () => {
     it('update→undoで元に戻り canRedo=true', () => {
         const { result } = renderHook(() => useReservationHistory(makeCommands()));
 

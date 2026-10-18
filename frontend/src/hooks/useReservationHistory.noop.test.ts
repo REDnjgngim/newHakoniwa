@@ -10,7 +10,7 @@ function makeCommands(): ReservationCommand[] {
     ];
 }
 
-describe('useReservationHistory no-opガード (P0-10,11)', () => {
+describe('useReservationHistory no-opガード', () => {
     it('reorder(1,1) は履歴・dirtyを触らない', () => {
         const { result } = renderHook(() => useReservationHistory(makeCommands()));
         const before = result.current.commands;
