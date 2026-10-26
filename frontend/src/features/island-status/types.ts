@@ -16,6 +16,6 @@ export type IslandStatus = {
 };
 
 export type HeaderStatusBarProps = {
-    status?: IslandStatus;
+    status: IslandStatus;
     className?: string;
 };

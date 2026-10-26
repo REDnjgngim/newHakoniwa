@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import { sectorTerrain } from './mocks/sector-terrain';
 import { mockIslandStatus } from './mocks/island-status';
-import { HeaderStatusBar } from './components/header/header-status-bar';
+import { HeaderStatusBar } from './features/island-status';
 import { HexMapPreview } from './components/hex-map/hex-map-preview';
 import { Inspector } from './components/inspector/Inspector';
 import { InspectorFrame } from './components/inspector/InspectorFrame';
