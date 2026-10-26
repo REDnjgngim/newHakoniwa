@@ -1,5 +1,5 @@
 import { useCallback, type RefObject } from 'react';
-import type { SectorTerrainData } from '../../types/terrain';
+import type { SectorTerrainData } from '../../../shared/types/terrain';
 import { applyCanvasRenderOptions, calcTileRenderSize } from '../canvas';
 import { tileToPixel } from '../geometry';
 import { drawBoundaryLine } from '../render/boundary-line';

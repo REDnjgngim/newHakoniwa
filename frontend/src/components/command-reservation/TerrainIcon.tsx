@@ -1,6 +1,6 @@
 import { TERRAIN_IMAGE_MAP } from '../../constants/terrain';
 import { sectorTerrain } from '../../mocks/sector-terrain';
-import { getTerrainTypeAt } from '../../map/terrain-lookup';
+import { getTerrainTypeAt } from '../../features/map/terrain-lookup';
 import type { Coordinate } from '../../types/command-reservation';
 
 export type TerrainIconProps = {
