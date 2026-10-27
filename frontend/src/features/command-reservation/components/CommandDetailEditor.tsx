@@ -1,96 +1,37 @@
-import type { CommandDetailPattern, ReservationCommand } from '../types';
+import type { ReservationCommand } from '../types';
 import { mockFleets, mockIslands, mockItems } from '../mocks/command-reservation';
 import { IslandSearchSelect } from './IslandSearchSelect';
 import { TerrainIcon } from './TerrainIcon';
+import { getCommandDefinition, getCommandDefinitionByName } from '../command-definition';
+import type { ParameterSchema, SliderParamSchema, SelectParamSchema } from '../command-definition';
 
 export type CommandDetailEditorProps = {
     command: ReservationCommand;
     onUpdate: (updatedCommand: ReservationCommand) => void;
 };
 
-function detectPattern(command: ReservationCommand): CommandDetailPattern {
-    const p = command.params ?? {};
-    if ('missileCount' in p) return 'missile';
-    if ('exportAmount' in p) return 'exportAmount';
-    if ('itemName' in p) return 'item';
-    if ('fleetName' in p) return 'fleet';
-    if ('amount' in p) return 'amount';
-    if ('scale' in p) return 'scale';
-    if (command.stackCount !== undefined) return 'stack';
-    if (command.coordinate) return 'coord-only';
-    return 'none';
+function resolveDefinition(command: ReservationCommand) {
+    if (command.commandCode) {
+        const def = getCommandDefinition(command.commandCode);
+        if (def) return def;
+    }
+    return getCommandDefinitionByName(command.name);
 }
 
-const EXPORT_AMOUNT_STEP = 10000;
-const SCALE_AMOUNT_STEP = 200;
-const SLIDER_MIN = 1;
-const SLIDER_MAX = 99;
-
-function clampSliderValue(value: number): number {
-    if (Number.isNaN(value)) return SLIDER_MIN;
-    return Math.min(SLIDER_MAX, Math.max(SLIDER_MIN, Math.floor(value)));
+function clampSliderValue(value: number, min: number, max: number): number {
+    if (Number.isNaN(value)) return min;
+    return Math.min(max, Math.max(min, Math.floor(value)));
 }
 
 function toNumberParam(value: string | number | boolean | undefined, fallback: number): number {
     return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
-function getSliderValue(pattern: CommandDetailPattern, command: ReservationCommand): number {
-    const params = command.params ?? {};
-    switch (pattern) {
-        case 'missile':
-            return clampSliderValue(toNumberParam(params.missileCount, SLIDER_MIN));
-        case 'exportAmount':
-            return clampSliderValue(toNumberParam(params.exportAmount, EXPORT_AMOUNT_STEP) / EXPORT_AMOUNT_STEP);
-        case 'amount':
-            return clampSliderValue(toNumberParam(params.amount, SLIDER_MIN));
-        case 'scale':
-            return clampSliderValue(Math.round(toNumberParam(params.scale, SCALE_AMOUNT_STEP) / SCALE_AMOUNT_STEP));
-        case 'stack':
-            return clampSliderValue(command.stackCount ?? toNumberParam(params.stackCount, SLIDER_MIN));
-        default:
-            return SLIDER_MIN;
-    }
-}
-
-function getSliderLabel(pattern: CommandDetailPattern): string {
-    switch (pattern) {
-        case 'missile':
-            return '発射数';
-        case 'exportAmount':
-            return '輸出量';
-        case 'amount':
-            return '数量';
-        case 'scale':
-            return '規模';
-        case 'stack':
-            return '回数';
-        default:
-            return '';
-    }
-}
-
-function getSliderDisplayValue(pattern: CommandDetailPattern, sliderValue: number): string {
-    if (pattern === 'exportAmount') {
-        return `${sliderValue * EXPORT_AMOUNT_STEP}トン`;
-    }
-    if (pattern === 'scale') {
-        return `${sliderValue * SCALE_AMOUNT_STEP}億円`;
-    }
-    return `${sliderValue}`;
-}
 export function CommandDetailEditor({ command, onUpdate }: CommandDetailEditorProps) {
-    const pattern = detectPattern(command);
-    const sliderValue = getSliderValue(pattern, command);
+    const definition = resolveDefinition(command);
     const params = command.params ?? {};
     const targetIslandValue =
         typeof params.targetIsland === 'string' ? params.targetIsland : (command.targetIsland ?? null);
-    const showSlider =
-        pattern === 'missile' ||
-        pattern === 'exportAmount' ||
-        pattern === 'amount' ||
-        pattern === 'scale' ||
-        pattern === 'stack';
     const islandOptions = mockIslands.map((island) => ({ value: island.name, label: island.name }));
     const itemOptions = mockItems.map((item) => ({ value: item.name, label: item.name }));
     const fleetOptions = mockFleets.map((fleet) => ({ value: fleet.name, label: fleet.name }));
@@ -104,33 +45,42 @@ export function CommandDetailEditor({ command, onUpdate }: CommandDetailEditorPr
             },
         });
     };
-    const handleSliderValueChange = (nextSliderValue: number) => {
-        const safeValue = clampSliderValue(nextSliderValue);
-        const updatedParams = { ...command.params };
-        if (pattern === 'missile') updatedParams.missileCount = safeValue;
-        else if (pattern === 'exportAmount') updatedParams.exportAmount = safeValue * EXPORT_AMOUNT_STEP;
-        else if (pattern === 'amount') updatedParams.amount = safeValue;
-        else if (pattern === 'scale') updatedParams.scale = safeValue * SCALE_AMOUNT_STEP;
-        else if (pattern === 'stack') updatedParams.stackCount = safeValue;
-        else return;
-        let summaryText = command.summaryText;
-        if (pattern === 'missile') summaryText = `発射数: ${safeValue}発`;
-        else if (pattern === 'exportAmount') summaryText = `輸出量: ${safeValue * EXPORT_AMOUNT_STEP}トン`;
-        else if (pattern === 'amount') summaryText = `数量: ${safeValue}`;
-        else if (pattern === 'scale') summaryText = `規模: ${safeValue * SCALE_AMOUNT_STEP}億円`;
-        onUpdate({
-            ...command,
-            summaryText,
-            stackCount: pattern === 'stack' ? safeValue : command.stackCount,
-            params: updatedParams,
-        });
-    };
     const handleParamTextChange = (key: string, value: string) => {
         onUpdate({ ...command, params: { ...command.params, [key]: value } });
     };
     const handleTargetIslandChange = (islandName: string) => {
         onUpdate({ ...command, targetIsland: islandName, params: { ...command.params, targetIsland: islandName } });
     };
+
+    const getSelectOptions = (schema: SelectParamSchema) => {
+        if (schema.kind === 'item-select') return itemOptions;
+        if (schema.kind === 'fleet-select') return fleetOptions;
+        return islandOptions;
+    };
+
+    const handleSliderValueChange = (schema: SliderParamSchema, nextSliderValue: number) => {
+        const min = schema.min;
+        const max = schema.max;
+        const scale = schema.scale ?? 1;
+        const safeValue = clampSliderValue(nextSliderValue, min, max);
+        const updatedParams = { ...command.params };
+        const actualValue = safeValue * scale;
+        updatedParams[schema.key] = actualValue;
+        const summaryText = schema.unit
+            ? `${schema.label}: ${actualValue}${schema.unit}`
+            : `${schema.label}: ${safeValue}`;
+        const stackCountUpdate =
+            schema.key === 'stackCount' && command.commandCode === 'RECRUIT' ? safeValue : command.stackCount;
+        onUpdate({
+            ...command,
+            summaryText,
+            stackCount: stackCountUpdate,
+            params: updatedParams,
+        });
+    };
+
+    const schemas: ParameterSchema[] = definition?.parameterSchemas ?? [];
+
     return (
         <div
             data-testid={`command-detail-${command.id}`}
@@ -138,92 +88,71 @@ export function CommandDetailEditor({ command, onUpdate }: CommandDetailEditorPr
             onClick={(e) => e.stopPropagation()}
         >
             <HeaderRow command={command} onSelect={handleCoordSelect} />
-            {showSlider && (
-                <div className="flex items-center justify-start gap-2 text-left text-xs">
-                    <span className="shrink-0">
-                        {getSliderLabel(pattern)}: {getSliderDisplayValue(pattern, sliderValue)}
-                    </span>
-                    <button
-                        type="button"
-                        aria-label="値を減らす"
-                        onClick={() => handleSliderValueChange(sliderValue - 1)}
-                        className="shrink-0 rounded-full border border-current/30 px-2 leading-tight"
-                    >
-                        -
-                    </button>
-                    <input
-                        type="range"
-                        aria-label={`${getSliderLabel(pattern)}スライダー`}
-                        min={SLIDER_MIN}
-                        max={SLIDER_MAX}
-                        value={sliderValue}
-                        onChange={(e) => handleSliderValueChange(Number(e.target.value))}
-                        className="min-w-0 flex-1 cursor-pointer"
-                    />
-                    <button
-                        type="button"
-                        aria-label="値を増やす"
-                        onClick={() => handleSliderValueChange(sliderValue + 1)}
-                        className="shrink-0 rounded-full border border-current/30 px-2 leading-tight"
-                    >
-                        +
-                    </button>
-                </div>
-            )}
-            <div className="mt-2 space-y-2 text-left">
-                {pattern === 'missile' && (
+            {schemas.map((schema) => {
+                if (schema.kind === 'slider') {
+                    const scale = schema.scale ?? 1;
+                    const min = schema.min;
+                    const max = schema.max;
+                    const raw = toNumberParam(params[schema.key], min * scale);
+                    const sliderValue = clampSliderValue(Math.round(raw / scale), min, max);
+                    const displayValue = schema.unit ? `${sliderValue * scale}${schema.unit}` : `${sliderValue}`;
+                    return (
+                        <div key={schema.key} className="flex items-center justify-start gap-2 text-left text-xs">
+                            <span className="shrink-0">
+                                {schema.label}: {displayValue}
+                            </span>
+                            <button
+                                type="button"
+                                aria-label="値を減らす"
+                                onClick={() => handleSliderValueChange(schema, sliderValue - 1)}
+                                className="shrink-0 rounded-full border border-current/30 px-2 leading-tight"
+                            >
+                                −
+                            </button>
+                            <input
+                                type="range"
+                                min={min}
+                                max={max}
+                                value={sliderValue}
+                                onChange={(e) => handleSliderValueChange(schema, Number(e.target.value))}
+                                className="h-1 w-24 cursor-pointer accent-white"
+                            />
+                            <button
+                                type="button"
+                                aria-label="値を増やす"
+                                onClick={() => handleSliderValueChange(schema, sliderValue + 1)}
+                                className="shrink-0 rounded-full border border-current/30 px-2 leading-tight"
+                            >
+                                ＋
+                            </button>
+                        </div>
+                    );
+                }
+                const selectSchema = schema;
+                const options = getSelectOptions(selectSchema);
+                const paramValue = params[selectSchema.key];
+                const value =
+                    selectSchema.key === 'targetIsland'
+                        ? targetIslandValue
+                        : typeof paramValue === 'string'
+                          ? paramValue
+                          : null;
+                const onChange =
+                    selectSchema.key === 'targetIsland'
+                        ? handleTargetIslandChange
+                        : (v: string | null) => handleParamTextChange(selectSchema.key, v ?? '');
+                return (
                     <IslandSearchSelect
-                        label="目標の島"
-                        options={islandOptions}
-                        value={targetIslandValue}
-                        onChange={handleTargetIslandChange}
+                        key={selectSchema.key}
+                        label={selectSchema.label}
+                        options={options}
+                        value={value}
+                        onChange={onChange}
                         commandId={command.id}
-                        labelSuffix="target"
+                        labelSuffix={selectSchema.labelSuffix}
                     />
-                )}
-                {pattern === 'item' && (
-                    <IslandSearchSelect
-                        label="アイテム"
-                        options={itemOptions}
-                        value={typeof params.itemName === 'string' ? params.itemName : null}
-                        onChange={(value) => handleParamTextChange('itemName', value)}
-                        commandId={command.id}
-                        labelSuffix="item"
-                    />
-                )}
-                {pattern === 'fleet' && (
-                    <>
-                        <IslandSearchSelect
-                            label="対象"
-                            options={fleetOptions}
-                            value={typeof params.fleetName === 'string' ? params.fleetName : null}
-                            onChange={(value) => handleParamTextChange('fleetName', value)}
-                            commandId={command.id}
-                            labelSuffix="fleet"
-                        />
-                        {command.name !== '戦艦建造' && (
-                            <>
-                                <IslandSearchSelect
-                                    label="移動元の島"
-                                    options={islandOptions}
-                                    value={typeof params.sourceIsland === 'string' ? params.sourceIsland : null}
-                                    onChange={(value) => handleParamTextChange('sourceIsland', value)}
-                                    commandId={command.id}
-                                    labelSuffix="source"
-                                />
-                                <IslandSearchSelect
-                                    label="移動先の島"
-                                    options={islandOptions}
-                                    value={targetIslandValue}
-                                    onChange={handleTargetIslandChange}
-                                    commandId={command.id}
-                                    labelSuffix="destination"
-                                />
-                            </>
-                        )}
-                    </>
-                )}
-            </div>
+                );
+            })}
             <div className="mt-2 space-y-0.5 border-t border-white/20 pt-1 text-left text-[10px] leading-tight text-white/90 sm:text-[11px]">
                 <div>実行予定ターン: T{command.estimatedTurn}</div>
                 <div>
