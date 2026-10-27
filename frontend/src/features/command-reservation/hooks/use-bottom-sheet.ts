@@ -4,13 +4,17 @@ export type UseBottomSheetReturn = {
     sheetHeightVh: number;
     isSheetHidden: boolean;
     isDraggingSheet: boolean;
-    snapHeightStyle: CSSProperties;
+    sheetCssVars: CSSProperties;
     handleDragHandlePointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
 };
 
+// 取っ手のみが見える最小高さ (dvh)
 const MIN_SHEET_VH = 2.5;
+// ドラッグで広げられる最大高さ (dvh)
 const MAX_SHEET_VH = 96;
+// この値以下になったらコンテンツを非表示にする閾値 (dvh)
 const HIDDEN_THRESHOLD_VH = 8;
+// 初期表示時の高さ (dvh)
 const INITIAL_SHEET_VH = 50;
 
 export function useBottomSheet(): UseBottomSheetReturn {
@@ -27,7 +31,7 @@ export function useBottomSheet(): UseBottomSheetReturn {
         dragStateRef.current = null;
         setIsDraggingSheet(false);
         if (!state || cancelled) return;
-        // 指を離した位置で確定する。下端まで下げ切ったら取っ手のみ残す高さに吸着。
+        // 閾値以下まで下げた場合、取っ手のみが残る最小高さへ吸着させる
         setSheetHeightVh((prev) => (prev <= HIDDEN_THRESHOLD_VH ? MIN_SHEET_VH : prev));
     }, []);
 
@@ -78,16 +82,15 @@ export function useBottomSheet(): UseBottomSheetReturn {
 
     const isSheetHidden = sheetHeightVh <= HIDDEN_THRESHOLD_VH;
 
-    const snapHeightStyle: CSSProperties = {
-        height: `${sheetHeightVh}dvh`,
-        maxHeight: `${MAX_SHEET_VH}dvh`,
-        transition: isDraggingSheet ? 'none' : 'height 0.15s ease-out',
-    };
+    const sheetCssVars: CSSProperties = {
+        '--sheet-height': `${sheetHeightVh}dvh`,
+        '--sheet-transition': isDraggingSheet ? 'none' : 'height 0.15s ease-out',
+    } as CSSProperties;
 
     return {
         sheetHeightVh,
         isSheetHidden,
-        snapHeightStyle,
+        sheetCssVars,
         handleDragHandlePointerDown,
         isDraggingSheet,
     };

@@ -25,7 +25,6 @@ export function BottomSheetContainer({ children }: BottomSheetContainerProps) {
                 data-testid="bottom-sheet-handle"
                 onPointerDown={handleDragHandlePointerDown}
                 className={`flex shrink-0 cursor-grab touch-none items-center justify-center py-2 transition-colors select-none hover:bg-sky-300/10 active:cursor-grabbing md:hidden ${isDraggingSheet ? 'bg-sky-300/10' : ''}`}
-                style={{ touchAction: 'none' }}
                 aria-label="ボトムシート高さ調整ハンドル（ドラッグで拡縮）"
             >
                 <div className="h-1.5 w-12 rounded-full bg-sky-200/50 hover:bg-sky-100/80" />
