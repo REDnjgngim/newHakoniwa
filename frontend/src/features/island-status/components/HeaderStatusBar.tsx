@@ -10,11 +10,7 @@ import { useSessionState } from '../../../shared/hooks/use-session-state';
 // 展開状態は sessionStorage に保持され、リロード後も維持される。
 // ============================================================================
 
-// デザイン調整用: マップパネル内での中身の最大幅。後から変えやすいよう定数化。
-// マップ幅いっぱいに広げたい場合は大きな値にする。詳細パネルもこの幅に収まる。
-const CONTENT_MAX_WIDTH_PX = 1200;
 const SESSION_KEY = 'header-status-bar:expanded';
-const PANEL_BG = 'rgba(10, 25, 45, 0.82)';
 
 function formatNumber(value: number): string {
     return value.toLocaleString('en-US');
@@ -28,23 +24,14 @@ export function HeaderStatusBar({ status, className = '' }: HeaderStatusBarProps
     return (
         <header
             data-testid="header-status-bar"
-            className={`relative z-20 w-full bg-transparent select-none ${className}`}
-            style={{ containerType: 'inline-size' }}
+            className={`@container relative z-20 w-full bg-transparent select-none ${className}`}
         >
             {/* デザイン調整用: 狭い画面=全幅、広い画面=中央 max 幅。以降の幅調整はここだけ */}
             {/* relative を付けて詳細パネルの absolute 基準にする（＝UI層幅に収まる） */}
-            <div className="relative mx-auto w-full" style={{ maxWidth: CONTENT_MAX_WIDTH_PX }}>
+            <div className="relative mx-auto w-full max-w-300">
                 <div className="flex w-full max-w-full items-start justify-between gap-1 sm:gap-2">
                     {/* 左側: Turn 表示（背景なし・文字だけ浮かせる。ヘッダー幅基準で拡縮） */}
-                    <div
-                        className="shrink-0 px-0.5 py-1.5 font-bold whitespace-nowrap text-white sm:px-1.5"
-                        style={{
-                            textShadow: '0 1px 4px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.9)',
-                            // 9:16枠の幅（=このheaderの幅）を基準に拡縮。
-                            // 縦スマホ（約390px）では約13px、PC枠（約600px）では上限14pxに落ち着く。
-                            fontSize: 'clamp(11px, 3.4cqw, 14px)',
-                        }}
-                    >
+                    <div className="shrink-0 px-0.5 py-1.5 text-[clamp(11px,3.4cqi,14px)] font-bold whitespace-nowrap text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.9),0_0_2px_rgba(0,0,0,0.9)] sm:px-1.5">
                         Turn {formatNumber(status.turn)} ({status.timeToNextTurn})
                     </div>
 
@@ -61,14 +48,7 @@ export function HeaderStatusBar({ status, className = '' }: HeaderStatusBarProps
                                 toggle();
                             }
                         }}
-                        className="flex min-w-0 shrink-0 cursor-pointer items-center justify-end gap-0.75 px-1 py-1.5 whitespace-nowrap text-white select-none sm:gap-2.5 sm:px-2.5"
-                        style={{
-                            backgroundColor: PANEL_BG,
-                            backdropFilter: 'blur(4px)',
-                            WebkitBackdropFilter: 'blur(4px)',
-                            borderRadius: '0 0 0 8px',
-                            fontSize: 'clamp(9px, 2.9cqw, 12px)',
-                        }}
+                        className="flex min-w-0 shrink-0 cursor-pointer items-center justify-end gap-0.75 rounded-bl-lg bg-[rgba(10,25,45,0.82)] px-1 py-1.5 text-[clamp(9px,2.9cqi,12px)] whitespace-nowrap text-white backdrop-blur-sm select-none sm:gap-2.5 sm:px-2.5"
                     >
                         <span aria-hidden="true" className="shrink-0 px-0 text-white sm:px-0.5">
                             {expanded ? '▲' : '▼'}
@@ -92,15 +72,7 @@ export function HeaderStatusBar({ status, className = '' }: HeaderStatusBarProps
                 >
                     <div className="overflow-hidden">
                         <div
-                            className={`px-2 py-1.5 leading-relaxed text-white tabular-nums transition-transform duration-300 ease-out sm:px-3 ${
-                                expanded ? 'translate-y-0' : '-translate-y-2'
-                            }`}
-                            style={{
-                                backgroundColor: PANEL_BG,
-                                backdropFilter: 'blur(4px)',
-                                WebkitBackdropFilter: 'blur(4px)',
-                                fontSize: 'clamp(9px, 2.9cqw, 12px)',
-                            }}
+                            className={`rounded-bl-lg bg-[rgba(10,25,45,0.82)] px-2 py-1.5 text-[clamp(9px,2.9cqi,12px)] leading-relaxed text-white tabular-nums backdrop-blur-sm transition-transform duration-300 ease-out sm:px-3 ${expanded ? 'translate-y-0' : '-translate-y-2'}`}
                         >
                             {/* 1行目=項目・2行目=値の横並び2行テーブル */}
                             <table className="w-full border-collapse whitespace-nowrap">
