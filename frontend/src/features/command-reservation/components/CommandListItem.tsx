@@ -101,7 +101,6 @@ export function CommandListItem({
                     aria-label="並び替えハンドル"
                     title="ドラッグで入れ替え"
                     className="relative flex cursor-grab touch-none items-center self-stretch px-0.5 py-1 select-none active:cursor-grabbing"
-                    style={{ touchAction: 'none' }}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div

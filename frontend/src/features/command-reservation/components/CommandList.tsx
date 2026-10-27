@@ -26,16 +26,7 @@ export function CommandList({
     onReorderCommands,
 }: CommandListProps) {
     const viewportRef = useRef<HTMLDivElement | null>(null);
-    const {
-        draggingIndex,
-        dragOverIndex,
-        dragOffsetY,
-        isPointerDragging,
-        handleHtml5DragStart,
-        handleHtml5DragOver,
-        handleHtml5DragEnd,
-        handlePointerDown,
-    } = useCommandReorder({
+    const { draggingIndex, dragOverIndex, dragOffsetY, isPointerDragging, handlePointerDown } = useCommandReorder({
         itemCount: commands.length,
         viewportElementRef: viewportRef,
         onReorder: onReorderCommands,
@@ -73,10 +64,6 @@ export function CommandList({
                         <div
                             key={cmd.id}
                             data-command-row-index={index}
-                            draggable={false}
-                            onDragStart={(e) => e.preventDefault()}
-                            onDragOver={(e) => handleHtml5DragOver(e, index)}
-                            onDragEnd={handleHtml5DragEnd}
                             onPointerDown={(e) => handlePointerDown(e, index)}
                             onClickCapture={
                                 isPointerDragging && draggingIndex === index
@@ -111,13 +98,6 @@ export function CommandList({
                                 onToggleExpand={() => onToggleExpand(cmd.id)}
                                 onSelect={() => handleRowSelect(cmd)}
                                 onDelete={() => onDeleteCommand(cmd.id)}
-                                dragHandleProps={{
-                                    draggable: !isPointerDragging,
-                                    onDragStart: (e) => {
-                                        e.stopPropagation();
-                                        handleHtml5DragStart(index);
-                                    },
-                                }}
                             />
                         </div>
                     );
