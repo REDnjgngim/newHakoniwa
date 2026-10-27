@@ -6,6 +6,7 @@ export type CommandType = 'normal' | 'fast';
 
 export type ReservationCommand = {
     id: string;
+    commandCode?: string;
     commandType: CommandType;
     name: string;
     coordinate?: Coordinate;

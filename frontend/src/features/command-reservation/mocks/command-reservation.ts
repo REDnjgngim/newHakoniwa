@@ -16,6 +16,7 @@ export const mockIslands: IslandOption[] = [
 export const mockReservationCommands: ReservationCommand[] = [
     {
         id: 'cmd-01',
+        commandCode: 'RECLAIM',
         commandType: 'normal',
         name: '埋め立て',
         coordinate: { x: 4, y: 4 },
@@ -24,6 +25,7 @@ export const mockReservationCommands: ReservationCommand[] = [
     },
     {
         id: 'cmd-02',
+        commandCode: 'EXPORT_FOOD',
         commandType: 'fast',
         name: '食料輸出',
         summaryText: '輸出量: 990000トン',
@@ -35,6 +37,7 @@ export const mockReservationCommands: ReservationCommand[] = [
     },
     {
         id: 'cmd-03',
+        commandCode: 'MISSILE',
         commandType: 'normal',
         name: '通常ミサイル',
         coordinate: { x: 5, y: 6 },
@@ -49,6 +52,7 @@ export const mockReservationCommands: ReservationCommand[] = [
     },
     {
         id: 'cmd-04',
+        commandCode: 'FLEET_MOVE',
         commandType: 'normal',
         name: '艦隊移動',
         summaryText: '対象: はげはげふがふが艦隊',
@@ -63,6 +67,7 @@ export const mockReservationCommands: ReservationCommand[] = [
     },
     {
         id: 'cmd-05',
+        commandCode: 'EXCAVATION',
         commandType: 'normal',
         name: '掘削',
         coordinate: { x: 10, y: 10 },
@@ -75,6 +80,7 @@ export const mockReservationCommands: ReservationCommand[] = [
     },
     {
         id: 'cmd-06',
+        commandCode: 'RECRUIT',
         commandType: 'normal',
         name: '誘致活動',
         stackCount: 99,
@@ -86,6 +92,7 @@ export const mockReservationCommands: ReservationCommand[] = [
     },
     {
         id: 'cmd-07',
+        commandCode: 'ITEM_EQUIP',
         commandType: 'fast',
         name: 'アイテム装備',
         coordinate: { x: 24, y: 24 },
@@ -98,6 +105,7 @@ export const mockReservationCommands: ReservationCommand[] = [
     },
     {
         id: 'cmd-08',
+        commandCode: 'BUILD_BATTLESHIP',
         commandType: 'normal',
         name: '戦艦建造',
         coordinate: { x: 10, y: 8 },
@@ -112,6 +120,7 @@ export const mockReservationCommands: ReservationCommand[] = [
     },
     {
         id: 'cmd-02b',
+        commandCode: 'EXPORT_FOOD',
         commandType: 'fast',
         name: '食料輸出',
         summaryText: '輸出量: 990000トン',
@@ -123,6 +132,7 @@ export const mockReservationCommands: ReservationCommand[] = [
     },
     {
         id: 'cmd-02c',
+        commandCode: 'EXPORT_FOOD',
         commandType: 'fast',
         name: '食料輸出',
         summaryText: '輸出量: 990000トン',
@@ -134,6 +144,7 @@ export const mockReservationCommands: ReservationCommand[] = [
     },
     {
         id: 'cmd-02d',
+        commandCode: 'EXPORT_FOOD',
         commandType: 'fast',
         name: '食料輸出',
         summaryText: '輸出量: 990000トン',
