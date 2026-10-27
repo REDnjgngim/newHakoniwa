@@ -37,7 +37,7 @@ const AUTO_SCROLL_MARGIN_PX = 56;
 const AUTO_SCROLL_STEP_PX = 8;
 const CLICK_SUPPRESS_MS = 400;
 const CLICK_SUPPRESS_DY_PX = 8;
-/** PCのHTML5 DnDとスマホのPointerドラッグを両対応する並び替え操作 */
+/** PC・スマホ共通の Pointer Events による並び替え操作 */
 export function useCommandReorder(options: UseCommandReorderOptions): UseCommandReorderReturn {
     const { itemCount, viewportElementRef: viewportRef, onReorder } = options;
     const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
@@ -97,7 +97,6 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
         [viewportRef]
     );
     const handlePointerDown = useCallback((event: ReactPointerEvent<HTMLElement>, index: number) => {
-        if (event.pointerType === 'mouse') return;
         const target = event.target instanceof HTMLElement ? event.target : null;
         if (target?.closest('button, select, input, textarea, a')) return;
         const isHandle = target?.closest('[data-drag-handle]') !== null;
@@ -106,33 +105,31 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
         if (!isHandle) {
             return; // ハンドル以外の操作は無視
         }
-        {
-            event.preventDefault();
-            try {
-                sourceElement?.setPointerCapture?.(event.pointerId);
-            } catch {
-                // capture不可でもwindowリスナーで継続する
-            }
-            const rowRect = sourceElement?.getBoundingClientRect();
-            const grabOffsetY = rowRect ? event.clientY - rowRect.top : 0;
-            pointerStateRef.current = {
-                pointerId: event.pointerId,
-                startIndex: index,
-                startClientY: event.clientY,
-                startClientX: event.clientX,
-                currentClientY: event.clientY,
-                currentClientX: event.clientX,
-                activated: true,
-                grabOffsetY,
-                sourceElement,
-            };
-            pointerActiveRef.current = true;
-            setDraggingIndex(index);
-            setDragOverIndex(index);
-            setDragOffsetY(0);
-            setIsPointerDragging(true);
-            return;
+        event.preventDefault();
+        try {
+            sourceElement?.setPointerCapture?.(event.pointerId);
+        } catch {
+            // capture不可でもwindowリスナーで継続する
         }
+        const rowRect = sourceElement?.getBoundingClientRect();
+        const grabOffsetY = rowRect ? event.clientY - rowRect.top : 0;
+        pointerStateRef.current = {
+            pointerId: event.pointerId,
+            startIndex: index,
+            startClientY: event.clientY,
+            startClientX: event.clientX,
+            currentClientY: event.clientY,
+            currentClientX: event.clientX,
+            activated: true,
+            grabOffsetY,
+            sourceElement,
+        };
+        pointerActiveRef.current = true;
+        setDraggingIndex(index);
+        setDragOverIndex(index);
+        setDragOffsetY(0);
+        setIsPointerDragging(true);
+        return;
     }, []);
 
     useEffect(() => {
