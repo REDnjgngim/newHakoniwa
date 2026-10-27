@@ -3,7 +3,6 @@ import {
     useEffect,
     useRef,
     useState,
-    type DragEvent as ReactDragEvent,
     type PointerEvent as ReactPointerEvent,
     type RefObject,
 } from 'react';
@@ -19,9 +18,6 @@ export type UseCommandReorderReturn = {
     dragOverIndex: number | null;
     dragOffsetY: number;
     isPointerDragging: boolean;
-    handleHtml5DragStart: (index: number) => void;
-    handleHtml5DragOver: (event: ReactDragEvent, index: number) => void;
-    handleHtml5DragEnd: () => void;
     handlePointerDown: (event: ReactPointerEvent<HTMLElement>, index: number) => void;
 };
 
@@ -86,31 +82,6 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
         },
         [itemCount, viewportRef]
     );
-
-    const handleHtml5DragStart = useCallback((index: number) => {
-        // スマホのポインタードラッグ中はHTML5 DnDを発火させない
-        if (pointerActiveRef.current) return;
-        setDraggingIndex(index);
-        setDragOverIndex(index);
-        setDragOffsetY(0);
-        setIsPointerDragging(false);
-    }, []);
-
-    const handleHtml5DragOver = useCallback((event: ReactDragEvent, index: number) => {
-        event.preventDefault();
-        setDragOverIndex(index);
-    }, []);
-
-    const handleHtml5DragEnd = useCallback(() => {
-        if (draggingIndex !== null && dragOverIndex !== null && draggingIndex !== dragOverIndex) {
-            onReorder(draggingIndex, dragOverIndex);
-        }
-        setDraggingIndex(null);
-        setDragOverIndex(null);
-        setDragOffsetY(0);
-        setIsPointerDragging(false);
-        clearPointerState();
-    }, [draggingIndex, dragOverIndex, onReorder, clearPointerState]);
 
     const autoScrollViewport = useCallback(
         (clientY: number) => {
@@ -234,9 +205,6 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
         dragOverIndex,
         dragOffsetY,
         isPointerDragging,
-        handleHtml5DragStart,
-        handleHtml5DragOver,
-        handleHtml5DragEnd,
         handlePointerDown,
     };
 }

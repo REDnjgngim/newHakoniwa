@@ -1,4 +1,4 @@
-import type { DragEventHandler, HTMLAttributes, ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import type { ReservationCommand } from '../types';
 import { TerrainIcon } from './TerrainIcon';
 
@@ -20,10 +20,7 @@ export type CommandListItemProps = {
     onSelect: () => void;
     onDelete: () => void;
     onStackClick?: () => void;
-    dragHandleProps?: HTMLAttributes<HTMLDivElement> & {
-        draggable?: boolean;
-        onDragStart?: DragEventHandler<HTMLDivElement>;
-    };
+    dragHandleProps?: HTMLAttributes<HTMLDivElement>;
 };
 
 export function CommandListItem({
