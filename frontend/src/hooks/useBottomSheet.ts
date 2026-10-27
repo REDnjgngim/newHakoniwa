@@ -82,17 +82,18 @@ export function useBottomSheet(): UseBottomSheetReturn {
 
     const isSheetHidden = sheetHeightVh <= HIDDEN_THRESHOLD_VH;
 
-    // モバイルのボトムシート高さスタイル（PCではTailwindのmd:クラスで上書きされる）
-    const snapHeightStyle: CSSProperties = {
-        height: `${sheetHeightVh}dvh`,
-        maxHeight: `${MAX_SHEET_VH}dvh`,
-        transition: isDraggingSheet ? 'none' : 'height 0.15s ease-out',
+    const sheetCssVars: CSSProperties & {
+        '--sheet-height': string;
+        '--sheet-transition': string;
+    } = {
+        '--sheet-height': `${sheetHeightVh}dvh`,
+        '--sheet-transition': isDraggingSheet ? 'none' : 'height 0.15s ease-out',
     };
 
     return {
         sheetHeightVh,
         isSheetHidden,
-        snapHeightStyle,
+        sheetCssVars,
         handleDragHandlePointerDown,
         isDraggingSheet,
     };

@@ -31,3 +31,18 @@ body {
     flex-direction: column;
     box-sizing: border-box;
 }
+
+/* BottomSheetのモバイル高さはCSS変数で制御 */
+[data-testid='bottom-sheet-container'] {
+    height: var(--sheet-height, 50dvh);
+    max-height: var(--sheet-height, 96dvh);
+    transition: var(--sheet-transition, height 0.15s ease-out);
+}
+
+@media (min-width: 768px) {
+    [data-testid='bottom-sheet-container'] {
+        height: auto !important;
+        max-height: 100% !important;
+        transition: none !important;
+    }
+}

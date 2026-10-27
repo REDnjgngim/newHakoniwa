@@ -82,10 +82,13 @@ export function useBottomSheet(): UseBottomSheetReturn {
 
     const isSheetHidden = sheetHeightVh <= HIDDEN_THRESHOLD_VH;
 
-    const sheetCssVars: CSSProperties = {
+    const sheetCssVars: CSSProperties & {
+        '--sheet-height': string;
+        '--sheet-transition': string;
+    } = {
         '--sheet-height': `${sheetHeightVh}dvh`,
         '--sheet-transition': isDraggingSheet ? 'none' : 'height 0.15s ease-out',
-    } as CSSProperties;
+    };
 
     return {
         sheetHeightVh,
