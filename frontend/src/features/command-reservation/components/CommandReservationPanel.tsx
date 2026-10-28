@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { ReservationCommand, TabType } from '../types';
-import { mockReservationCommands } from '../mocks/command-reservation';
-import { useReservationHistory } from '../hooks/use-reservation-history';
+import { useGameSession } from '../../game-session';
 import { BottomSheetContainer } from './BottomSheetContainer';
 import { PanelTabBar } from './PanelTabBar';
 import { CommandList } from './CommandList';
@@ -9,16 +8,12 @@ import { PanelFooter } from './PanelFooter';
 import { ToastNotification } from './ToastNotification';
 
 export type CommandReservationPanelProps = {
-    initialCommands?: ReservationCommand[];
     onSelectCommand?: (command: ReservationCommand | null) => void;
 };
 
-export function CommandReservationPanel({
-    initialCommands = mockReservationCommands,
-    onSelectCommand,
-}: CommandReservationPanelProps) {
+export function CommandReservationPanel({ onSelectCommand }: CommandReservationPanelProps) {
     const { commands, updateCommand, deleteCommand, reorderCommands, undo, redo, canUndo, canRedo, markSaved } =
-        useReservationHistory(initialCommands);
+        useGameSession();
     // タブ選択状態（デフォルト「予約」）
     const [activeTab, setActiveTab] = useState<TabType>('reservation');
 

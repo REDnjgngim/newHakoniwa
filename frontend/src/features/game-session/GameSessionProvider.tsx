@@ -40,5 +40,5 @@ export function GameSessionProvider({
         resetCommands: history.resetCommands,
     };
 
-    return <GameSessionContext.Provider value={value}>{children}</GameSessionContext.Provider>;
+    return <GameSessionContext value={value}>{children}</GameSessionContext>;
 }
