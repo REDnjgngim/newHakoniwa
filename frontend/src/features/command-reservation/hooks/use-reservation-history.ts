@@ -3,6 +3,7 @@ import type { ReservationCommand } from '../types';
 
 export type UseReservationHistoryReturn = {
     commands: ReservationCommand[];
+    addCommand: (command: ReservationCommand) => void;
     updateCommand: (id: string, partial: Partial<ReservationCommand>) => void;
     deleteCommand: (id: string) => void;
     reorderCommands: (fromIndex: number, toIndex: number) => void;
@@ -41,6 +42,13 @@ export function useReservationHistory(initialCommands: ReservationCommand[]): Us
             setIsDirty(true);
         },
         [past, present]
+    );
+
+    const addCommand = useCallback(
+        (command: ReservationCommand) => {
+            setNextState((current) => [...current, command]);
+        },
+        [setNextState]
     );
 
     const updateCommand = useCallback(
@@ -119,6 +127,7 @@ export function useReservationHistory(initialCommands: ReservationCommand[]): Us
 
     return {
         commands: present,
+        addCommand,
         updateCommand,
         deleteCommand,
         reorderCommands,
