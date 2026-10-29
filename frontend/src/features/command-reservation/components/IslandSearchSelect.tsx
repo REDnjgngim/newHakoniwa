@@ -1,4 +1,4 @@
-import Select, { type SingleValue } from 'react-select';
+import { useState, useRef, useEffect } from 'react';
 
 export type IslandSearchOption = {
     value: string;
@@ -16,7 +16,7 @@ type IslandSearchSelectProps = {
 
 /**
  * 島・アイテム・艦隊選択用の検索付きドロップダウン。
- * react-select (unstyled + Tailwind classNames) のラッパー。
+ * React 標準フック + Tailwind CSS の軽量な独自実装。
  */
 export function IslandSearchSelect({
     label,
@@ -27,50 +27,92 @@ export function IslandSearchSelect({
     labelSuffix,
 }: IslandSearchSelectProps) {
     const inputId = `island-search-${commandId}${labelSuffix ? `-${labelSuffix}` : ''}`;
-    const selectedOption: SingleValue<IslandSearchOption> =
-        options.find((opt) => opt.value === value || opt.label === value) ?? null;
+    const selectedLabel = options.find((opt) => opt.value === value || opt.label === value)?.label ?? '選択...';
 
-    const handleChange = (option: SingleValue<IslandSearchOption>) => {
-        if (option) {
-            onChange(option.value);
+    const [isOpen, setIsOpen] = useState(false);
+    const [query, setQuery] = useState('');
+    const [highlightedIndex, setHighlightedIndex] = useState(-1);
+
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const filteredOptions = options.filter((opt) => opt.label.includes(query));
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (containerRef.current && !(e.target instanceof Node && containerRef.current.contains(e.target))) {
+                setIsOpen(false);
+                setQuery('');
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Escape') {
+            setIsOpen(false);
+            setQuery('');
+        } else if (e.key === 'Enter') {
+            const opt = filteredOptions[highlightedIndex];
+            if (opt) {
+                onChange(opt.value);
+                setIsOpen(false);
+                setQuery('');
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (filteredOptions.length === 0) return;
+            setHighlightedIndex((i) => (i + 1) % filteredOptions.length);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (filteredOptions.length === 0) return;
+            setHighlightedIndex((i) => (i - 1 + filteredOptions.length) % filteredOptions.length);
         }
     };
 
     return (
-        <div className="flex items-center gap-2 text-left text-xs">
+        <div ref={containerRef} className="relative flex items-center gap-2 text-left text-xs">
             <label htmlFor={inputId} className="shrink-0 text-xs">
                 {label}
             </label>
-            <div className="inline-block w-auto max-w-55 min-w-30">
-                <Select<IslandSearchOption, false>
-                    inputId={inputId}
+            <div className="relative inline-block w-auto max-w-55 min-w-30">
+                <button
+                    type="button"
+                    id={inputId}
                     aria-label={label}
-                    options={options}
-                    value={selectedOption}
-                    onChange={handleChange}
-                    placeholder="選択..."
-                    isSearchable
-                    isClearable={false}
-                    unstyled
-                    menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
-                    styles={{
-                        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                    }}
-                    classNames={{
-                        control: () =>
-                            'border border-white/30 rounded bg-black/20 px-1.5 py-0.5 text-xs text-white cursor-pointer min-h-0',
-                        menu: () => 'mt-1 rounded border border-slate-700 bg-slate-900 shadow-xl text-xs',
-                        menuList: () => 'py-1 max-h-60 overflow-y-auto',
-                        option: () => 'px-2 py-1 text-xs cursor-pointer',
-                        input: () => 'text-xs text-white p-0 m-0',
-                        placeholder: () => 'text-xs text-white/50',
-                        singleValue: () => 'text-xs text-white',
-                        valueContainer: () => 'py-0 px-1 gap-1',
-                        indicatorsContainer: () => 'p-0 text-white/70',
-                        dropdownIndicator: () => 'p-0.5 text-white/70 hover:text-white',
-                        clearIndicator: () => 'p-0',
-                    }}
-                />
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="min-h-0 w-full cursor-pointer rounded border border-white/30 bg-black/20 px-1.5 py-0.5 text-left text-xs text-white"
+                >
+                    {selectedLabel}
+                </button>
+                {isOpen && (
+                    <div className="absolute top-full left-0 z-50 mt-1 w-full rounded border border-slate-700 bg-slate-900 shadow-xl">
+                        <input
+                            type="text"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="検索..."
+                            className="w-full border-b border-slate-700 bg-transparent px-2 py-1 text-xs text-white outline-none"
+                            autoFocus
+                        />
+                        <ul className="max-h-60 overflow-y-auto py-1">
+                            {filteredOptions.map((opt, i) => (
+                                <li
+                                    key={opt.value}
+                                    onClick={() => {
+                                        onChange(opt.value);
+                                        setIsOpen(false);
+                                        setQuery('');
+                                    }}
+                                    className={`cursor-pointer px-2 py-1 text-xs ${i === highlightedIndex ? 'bg-slate-700' : 'hover:bg-slate-800'}`}
+                                >
+                                    {opt.label}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </div>
         </div>
     );
