@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
-import type { ReservationCommand } from '../types/command-reservation';
-import { useReservationHistory } from './useReservationHistory';
+import type { ReservationCommand } from '../types';
+import { useReservationHistory } from './use-reservation-history';
 
 function makeCommands(): ReservationCommand[] {
     return [

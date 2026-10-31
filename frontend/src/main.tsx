@@ -1,9 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
-import { sectorTerrain } from './mocks/sector-terrain';
-import { mockIslandStatus } from './mocks/island-status';
-import { mockReservationCommands } from './mocks/command-reservation';
+import { sectorTerrain } from './features/map/mocks/sector-terrain';
+import { mockIslandStatus } from './features/island-status/mocks/island-status';
+import { mockReservationCommands } from './features/command-reservation/mocks/command-reservation';
 import { GameSessionProvider } from './features/game-session';
 import { App } from './App';
 
