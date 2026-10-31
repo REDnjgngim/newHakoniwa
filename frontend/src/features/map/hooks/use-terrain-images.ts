@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useRef } from 'react';
-import type { TerrainImageMap } from '../types';
+import type { TerrainImageMap } from '../engine/types';
 
 // ============================================================================
 // 地形画像のプリロードフック。

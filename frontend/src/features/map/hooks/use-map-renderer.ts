@@ -1,12 +1,12 @@
 import { useCallback, type RefObject } from 'react';
 import type { SectorTerrainData } from '@/shared/terrain-types';
-import { applyCanvasRenderOptions, calcTileRenderSize } from '../canvas';
-import { tileToPixel } from '../geometry';
+import { applyCanvasRenderOptions, calcTileRenderSize } from '../engine/canvas';
+import { tileToPixel } from '../engine/geometry';
 import { drawBoundaryLine } from '../render/boundary-line';
 import { drawCoordLabels } from '../render/coord-labels';
 import { drawCornerCursor, getPulseScale } from '../render/corner-cursor';
 import { calcHoverFadeAlpha, drawHoverGuideLines } from '../render/hover-grid';
-import type { HoverState, ResolvedMapSettings, ViewState } from '../types';
+import type { HoverState, ResolvedMapSettings, ViewState } from '../engine/types';
 import type { TileCoord } from '@/shared/terrain-types';
 import { useTerrainImages } from './use-terrain-images';
 

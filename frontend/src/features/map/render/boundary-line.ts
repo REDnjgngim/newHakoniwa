@@ -1,5 +1,5 @@
-import type { BoundaryLineConfig, ViewState } from '../types';
-import { tileToPixel } from '../geometry';
+import type { BoundaryLineConfig, ViewState } from '../engine/types';
+import { tileToPixel } from '../engine/geometry';
 
 // ============================================================================
 // 12×12 グリッドの外枠を囲む境界ラインを描画する。

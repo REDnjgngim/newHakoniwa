@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { useTileSelection } from './use-tile-selection';
-import type { AnimationLoopController } from '../types';
+import type { AnimationLoopController } from '../engine/types';
 import type { TileCoord } from '@/shared/terrain-types';
 import type { SectorTerrainData, TerrainCell } from '@/shared/terrain-types';
 

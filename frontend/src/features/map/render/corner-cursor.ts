@@ -1,4 +1,4 @@
-import type { CornerCursorConfig } from '../types';
+import type { CornerCursorConfig } from '../engine/types';
 
 // 選択タイルの4隅にL字ブラケットを描く。scaleでサイズを拡縮する（中心基準）
 export function drawCornerCursor(

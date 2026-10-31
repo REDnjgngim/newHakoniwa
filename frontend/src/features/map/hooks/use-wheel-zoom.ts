@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, type RefObject } from 'react';
-import { clamp, clampPanOffset, zoomAroundPoint } from '../geometry';
-import type { PanLimitMode, ViewState } from '../types';
+import { clamp, clampPanOffset, zoomAroundPoint } from '../engine/geometry';
+import type { PanLimitMode, ViewState } from '../engine/types';
 
 // ============================================================================
 // マウスホイールによるズーム操作を提供するフック。

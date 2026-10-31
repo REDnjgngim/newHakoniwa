@@ -1,5 +1,5 @@
 import { useCallback, type RefObject } from 'react';
-import type { AnimationLoopController, HoverState } from '../types';
+import type { AnimationLoopController, HoverState } from '../engine/types';
 import type { TileCoord } from '@/shared/terrain-types';
 import { useAnimationLoop } from './use-animation-loop';
 

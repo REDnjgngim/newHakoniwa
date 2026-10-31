@@ -1,5 +1,5 @@
 import { useCallback, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
-import type { HoverCell, HoverState, HoverTrackingResult, PointerLocalPosition } from '../types';
+import type { HoverCell, HoverState, HoverTrackingResult, PointerLocalPosition } from '../engine/types';
 
 // ============================================================================
 // マウス/ペン/タッチの違いを吸収し、「今どのセルをホバーしているか」の状態管理と

@@ -1,5 +1,5 @@
-import { applyCanvasRenderOptions, calcTileRenderSize } from './canvas';
-import { MAP_VIEW_SETTINGS } from './settings';
+import { applyCanvasRenderOptions, calcTileRenderSize } from './engine/canvas';
+import { MAP_VIEW_SETTINGS } from './engine/settings';
 
 describe('calcTileRenderSize', () => {
     it('タイルサイズに overlapPx を加えた描画サイズを返す（実測値で固定）', () => {

@@ -1,6 +1,6 @@
-import type { OverlayLabelConfig, ViewState } from '../types';
+import type { OverlayLabelConfig, ViewState } from '../engine/types';
 import type { TileCoord } from '@/shared/terrain-types';
-import { getVisibleLabelRange, tileToPixel } from '../geometry';
+import { getVisibleLabelRange, tileToPixel } from '../engine/geometry';
 
 // 影→縁取り→本体の順に重ねて文字を描く（影は同じ字形を右下へずらして暗い色で描く）
 export function drawLabelText(

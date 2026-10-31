@@ -1,4 +1,4 @@
-import { CORNER_CURSOR_SETTINGS } from '../settings';
+import { CORNER_CURSOR_SETTINGS } from '../engine/settings';
 import { getPulseScale } from './corner-cursor';
 
 describe('getPulseScale', () => {

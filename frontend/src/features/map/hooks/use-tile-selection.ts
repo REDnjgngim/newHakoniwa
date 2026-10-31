@@ -1,6 +1,6 @@
 import { useCallback, type RefObject } from 'react';
 import type { SectorTerrainData } from '@/shared/terrain-types';
-import type { AnimationLoopController, OnSelectTile } from '../types';
+import type { AnimationLoopController, OnSelectTile } from '../engine/types';
 import type { TileCoord } from '@/shared/terrain-types';
 
 // ============================================================================

@@ -1,4 +1,4 @@
-import { HOVER_GRID_SETTINGS } from '../settings';
+import { HOVER_GRID_SETTINGS } from '../engine/settings';
 import { calcHoverFadeAlpha, calcHoverLineWidth } from './hover-grid';
 
 describe('calcHoverLineWidth', () => {

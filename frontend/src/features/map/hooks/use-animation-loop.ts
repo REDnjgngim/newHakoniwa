@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import type { AnimationLoopController } from '../types';
+import type { AnimationLoopController } from '../engine/types';
 
 // ============================================================================
 // requestAnimationFrame ループを共通化するフック。

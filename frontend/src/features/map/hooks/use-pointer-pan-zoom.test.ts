@@ -1,4 +1,4 @@
-import { clampPanOffset } from '../geometry';
+import { clampPanOffset } from '../engine/geometry';
 
 describe('clampPanOffset', () => {
     it('存在する', () => {

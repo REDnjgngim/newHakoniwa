@@ -30,7 +30,7 @@ export type {
     TerrainImageMap,
     TileRange,
     ViewState,
-} from './types';
+} from './engine/types';
 // shared 由来の地形・座標型（中継削除後の直接公開）
 export type { Coordinate, SectorTerrainData, TerrainCell, TerrainType } from '@/shared/terrain-types';
 
@@ -42,7 +42,7 @@ export {
     LABEL_SETTINGS,
     MAP_VIEW_SETTINGS,
     resolveMapSettings,
-} from './settings';
+} from './engine/settings';
 
 // 幾何・Canvas
 export {
@@ -54,8 +54,8 @@ export {
     pixelToTile,
     tileToPixel,
     zoomAroundPoint,
-} from './geometry';
-export { applyCanvasRenderOptions, calcTileRenderSize, setupCanvasForDpr } from './canvas';
+} from './engine/geometry';
+export { applyCanvasRenderOptions, calcTileRenderSize, setupCanvasForDpr } from './engine/canvas';
 
 // 描画
 export { drawBoundaryLine } from './render/boundary-line';

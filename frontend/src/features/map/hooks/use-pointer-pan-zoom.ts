@@ -1,6 +1,6 @@
 import { useRef, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
-import { clamp, clampPanOffset, distance, zoomAroundPoint } from '../geometry';
-import type { PanLimitMode, PinchState, PointerPanZoomResult, ViewState } from '../types';
+import { clamp, clampPanOffset, distance, zoomAroundPoint } from '../engine/geometry';
+import type { PanLimitMode, PinchState, PointerPanZoomResult, ViewState } from '../engine/types';
 
 // ============================================================================
 // ドラッグ（パン）・ピンチ（ズーム）操作を提供するフック。

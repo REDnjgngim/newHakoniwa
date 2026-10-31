@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useRef, type RefObject } from 'react';
-import { clamp } from '../geometry';
+import { clamp } from '../engine/geometry';
 
 // ============================================================================
 // 要素サイズを ResizeObserver で追従するフック。

@@ -1,5 +1,5 @@
-import { getVisibleLabelRange, tileToPixel } from '../geometry';
-import type { HoverGridConfig, ViewState } from '../types';
+import { getVisibleLabelRange, tileToPixel } from '../engine/geometry';
+import type { HoverGridConfig, ViewState } from '../engine/types';
 
 // 表示倍率に応じたガイドラインの線幅（文字サイズと同じ指数カーブで伸ばし、上下限で頭打ちにする）
 export function calcHoverLineWidth(scale: number, settings: HoverGridConfig): number {
