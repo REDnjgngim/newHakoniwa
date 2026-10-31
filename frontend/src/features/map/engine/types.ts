@@ -53,7 +53,19 @@ export type OverlayLabelConfig = {
     edgeInsetPx: number;
 };
 
-// ホバー中のマスを示すガイドラインの描画設定
+export type TerrainCache = {
+    canvas: HTMLCanvasElement;
+    width: number;
+    height: number;
+    tileSize: number;
+};
+
+export type BuildTerrainCacheParams = {
+    sector: SectorTerrainData;
+    settings: ResolvedMapSettings;
+    images: ReadonlyMap<string, HTMLImageElement>;
+};
+
 export type HoverGridConfig = {
     lineColor: string;
     baseLineWidth: number;

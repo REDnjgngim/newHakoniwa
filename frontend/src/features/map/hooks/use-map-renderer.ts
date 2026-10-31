@@ -1,4 +1,4 @@
-import { useCallback, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type { SectorTerrainData } from '@/shared/terrain-types';
 import { applyCanvasRenderOptions, calcTileRenderSize } from '../engine/canvas';
 import { tileToPixel } from '../engine/geometry';
@@ -6,7 +6,8 @@ import { drawBoundaryLine } from '../render/boundary-line';
 import { drawCoordLabels } from '../render/coord-labels';
 import { drawCornerCursor, getPulseScale } from '../render/corner-cursor';
 import { calcHoverFadeAlpha, drawHoverGuideLines } from '../render/hover-grid';
-import type { HoverState, ResolvedMapSettings, ViewState } from '../engine/types';
+import { buildTerrainCache } from '../engine/terrain-cache';
+import type { HoverState, ResolvedMapSettings, TerrainCache, ViewState } from '../engine/types';
 import type { TileCoord } from '@/shared/terrain-types';
 import { useTerrainImages } from './use-terrain-images';
 
@@ -48,14 +49,21 @@ export function useMapRenderer(params: MapRendererParams): MapRendererResult {
         sector,
         settings,
     } = params;
-    const { map_width, map_height, terrain_grid } = sector;
-    const { theme, renderOptions, tileSize: baseTileSize, marginTiles } = settings.view;
+    const { map_width, map_height } = sector;
+    const { renderOptions, tileSize: baseTileSize } = settings.view;
 
-    // 画像の読み込み完了時に最新の地形描画を呼ぶ。render より先に宣言する必要があるため、
-    // 非同期の読み込み完了時に解決されるクロージャで参照する（renderRef は使わない）。
+    const cacheRef = useRef<TerrainCache | null>(null);
+    const renderRef = useRef<() => void>(() => {});
+    const [imageVersion, setImageVersion] = useState(0);
     const images = useTerrainImages(settings.images, () => {
-        render();
+        setImageVersion((v) => v + 1);
+        setTimeout(() => renderRef.current(), 0);
     });
+
+    useEffect(() => {
+        const c = buildTerrainCache({ sector, settings, images });
+        cacheRef.current = c;
+    }, [sector, settings, images, imageVersion]);
 
     const render = useCallback(() => {
         const canvas = canvasRef.current;
@@ -65,65 +73,18 @@ export function useMapRenderer(params: MapRendererParams): MapRendererResult {
         const { width, height } = sizeRef.current;
         if (width <= 0 || height <= 0) return;
 
+        const c = cacheRef.current;
+        if (!c) return;
+
         ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = settings.view.theme.outerSea;
+        ctx.fillRect(0, 0, width, height);
         applyCanvasRenderOptions(ctx, renderOptions);
         const view = viewRef.current;
 
-        // グリッド外周も外周色でベタ塗りするため、可視レンジはグリッド内に制限しない
-        // （getVisibleRange と同じ式から Math.max(0, …) / Math.min(mapW - 1, …) の制限を外したもの）
-        const tileSize = baseTileSize * view.scale;
-        const colStart = Math.floor(view.offsetX / tileSize) - marginTiles;
-        const colEnd = Math.ceil((view.offsetX + width) / tileSize) + marginTiles;
-        const rowStart = Math.floor(view.offsetY / tileSize) - marginTiles;
-        const rowEnd = Math.ceil((view.offsetY + height) / tileSize) + marginTiles;
-
-        // オプションに応じたタイル描画サイズを計算
-        const renderSize = calcTileRenderSize(tileSize, renderOptions);
-
-        for (let y = rowStart; y <= rowEnd; y++) {
-            for (let x = colStart; x <= colEnd; x++) {
-                const isOutsideGrid = x < 0 || x >= map_width || y < 0 || y >= map_height;
-                const cell = isOutsideGrid ? undefined : terrain_grid[y]?.[x];
-
-                const { px, py } = tileToPixel(x, y, view, baseTileSize);
-                const drawX = px - tileSize / 2;
-                const drawY = py - tileSize / 2;
-
-                if (!cell) {
-                    // グリッド外 → 外周色でベタ塗り（インタラクション対象外）
-                    ctx.fillStyle = theme.outerSea;
-                    ctx.fillRect(drawX, drawY, renderSize, renderSize);
-                    continue;
-                }
-
-                // 画像が未定義の地形タイプはフォールバック矩形で描く
-                const imgSrc = settings.images[cell.type];
-                const img = imgSrc ? images.get(imgSrc) : undefined;
-
-                if (img && img.complete && img.naturalWidth > 0) {
-                    ctx.drawImage(img, drawX, drawY, renderSize, renderSize);
-                } else {
-                    ctx.fillStyle = theme.fallbackBg;
-                    ctx.fillRect(drawX, drawY, renderSize, renderSize);
-                    ctx.strokeStyle = theme.fallbackBorder;
-                    ctx.strokeRect(drawX, drawY, renderSize, renderSize);
-                }
-            }
-        }
-    }, [
-        canvasRef,
-        sizeRef,
-        viewRef,
-        map_width,
-        map_height,
-        terrain_grid,
-        baseTileSize,
-        marginTiles,
-        renderOptions,
-        theme,
-        settings.images,
-        images,
-    ]);
+        ctx.drawImage(c.canvas, -view.offsetX, -view.offsetY, c.width * view.scale, c.height * view.scale);
+    }, [canvasRef, sizeRef, viewRef, renderOptions, settings.view.theme.outerSea]);
+    renderRef.current = render;
 
     // オーバーレイの再描画。ホバーガイドライン・選択カーソル・座標ラベルを描く
     const renderOverlay = useCallback(() => {
