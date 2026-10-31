@@ -32,7 +32,7 @@ export type {
     ViewState,
 } from './engine/types';
 // shared 由来の地形・座標型（中継削除後の直接公開）
-export type { Coordinate, SectorTerrainData, TerrainCell, TerrainType } from '@/shared/terrain-types';
+export type { Coordinate, SectorTerrainData, TerrainCell, TerrainType, TileCoord } from '@/shared/terrain-types';
 
 // 設定
 export {

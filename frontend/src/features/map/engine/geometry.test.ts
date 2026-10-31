@@ -7,8 +7,8 @@ import {
     pixelToTile,
     tileToPixel,
     zoomAroundPoint,
-} from './engine/geometry';
-import type { ViewState } from './engine/types';
+} from './geometry';
+import type { ViewState } from './types';
 
 // 実測に使用した条件（12x12マップ・tileSize=32・canvas 800x600 を想定）
 const MAP_WIDTH = 12;
