@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import type { ReservationCommand } from '../types';
 import type { SectorTerrainData } from '@/shared/terrain-types';
 import type { IslandSearchOption } from './IslandSearchSelect';
@@ -35,11 +35,21 @@ export function CommandList({
     onReorderCommands,
 }: CommandListProps) {
     const viewportRef = useRef<HTMLDivElement | null>(null);
-    const { draggingIndex, dragOverIndex, dragOffsetY, isPointerDragging, handlePointerDown } = useCommandReorder({
+    const { draggingIndex, dragOffsetY, isPointerDragging, handlePointerDown } = useCommandReorder({
         itemCount: commands.length,
         viewportElementRef: viewportRef,
         onReorder: onReorderCommands,
     });
+
+    useEffect(() => {
+        if (isPointerDragging) {
+            document.body.style.cursor = 'grabbing';
+            return () => {
+                document.body.style.cursor = '';
+            };
+        }
+        document.body.style.cursor = '';
+    }, [isPointerDragging]);
 
     const handleRowSelect = (command: ReservationCommand) => {
         if (focusedId === command.id) {
@@ -57,17 +67,7 @@ export function CommandList({
                 commands.map((cmd, index) => {
                     const isExpanded = expandedIds.has(cmd.id);
                     const isFocused = focusedId === cmd.id;
-                    // 上へ移動（または同じ位置）: dragOverIndex の行の上にライン
-                    const isInsertAbove =
-                        dragOverIndex === index && draggingIndex !== null && dragOverIndex <= draggingIndex;
-                    // 下へ移動: dragOverIndex の行の下にライン
-                    const isInsertBelow =
-                        dragOverIndex === index && draggingIndex !== null && dragOverIndex > draggingIndex;
                     // 高速（青色）同士が連続する場合のみ連結表示する
-                    const prevCommand = commands[index - 1];
-                    const nextCommand = commands[index + 1];
-                    const isConnectedToPrev = cmd.commandType === 'fast' && prevCommand?.commandType === 'fast';
-                    const isConnectedToNext = cmd.commandType === 'fast' && nextCommand?.commandType === 'fast';
 
                     return (
                         <div
@@ -87,28 +87,32 @@ export function CommandList({
                                     ? { transform: `translateY(${dragOffsetY}px)`, touchAction: 'none' }
                                     : undefined
                             }
-                            className={`transition-opacity ${isPointerDragging && draggingIndex === index ? 'relative z-20 touch-none shadow-xl' : 'touch-pan-y'} ${draggingIndex === index ? 'opacity-90' : 'opacity-100'}`}
+                            className={`${isPointerDragging && draggingIndex === index ? 'relative z-20 cursor-grabbing touch-none shadow-xl' : 'touch-pan-y'} ${draggingIndex === index ? 'opacity-90' : 'opacity-100'}`}
                         >
-                            <CommandListItem
-                                command={cmd}
-                                terrain={terrain}
-                                displayOrder={index + 1}
-                                isExpanded={isExpanded}
-                                isFocused={isFocused}
-                                isInsertAbove={isInsertAbove}
-                                isInsertBelow={isInsertBelow}
-                                isConnectedToPrev={isConnectedToPrev}
-                                isConnectedToNext={isConnectedToNext}
-                                renderDetail={(command) => (
-                                    <CommandDetailEditor
-                                        command={command}
-                                        onUpdate={(updated) => onUpdateCommand(command.id, updated)}
-                                    />
-                                )}
-                                onToggleExpand={() => onToggleExpand(cmd.id)}
-                                onSelect={() => handleRowSelect(cmd)}
-                                onDelete={() => onDeleteCommand(cmd.id)}
-                            />
+                            <div
+                                className={
+                                    isPointerDragging && draggingIndex === index
+                                        ? 'scale-[1.02] transition-transform duration-100'
+                                        : ''
+                                }
+                            >
+                                <CommandListItem
+                                    command={cmd}
+                                    terrain={terrain}
+                                    displayOrder={index + 1}
+                                    isExpanded={isExpanded}
+                                    isFocused={isFocused}
+                                    renderDetail={(command) => (
+                                        <CommandDetailEditor
+                                            command={command}
+                                            onUpdate={(updated) => onUpdateCommand(command.id, updated)}
+                                        />
+                                    )}
+                                    onToggleExpand={() => onToggleExpand(cmd.id)}
+                                    onSelect={() => handleRowSelect(cmd)}
+                                    onDelete={() => onDeleteCommand(cmd.id)}
+                                />
+                            </div>
                         </div>
                     );
                 })

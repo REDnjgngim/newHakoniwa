@@ -11,12 +11,6 @@ export type CommandListItemProps = {
     displayOrder: number;
     isExpanded: boolean;
     isFocused: boolean;
-    isInsertAbove?: boolean;
-    isInsertBelow?: boolean;
-    /** 直前が同じ種別（青色同士など）の場合に連結表示する */
-    isConnectedToPrev?: boolean;
-    /** 直後が同じ種別（青色同士など）の場合に連結表示する */
-    isConnectedToNext?: boolean;
     /** 展開時に中央列へ埋め込む詳細編集コンテンツ */
     renderDetail?: (command: ReservationCommand) => ReactNode;
     onToggleExpand: () => void;
@@ -32,10 +26,6 @@ export const CommandListItem = memo(function CommandListItem({
     displayOrder,
     isExpanded,
     isFocused,
-    isInsertAbove = false,
-    isInsertBelow = false,
-    isConnectedToPrev = false,
-    isConnectedToNext = false,
     renderDetail,
     onToggleExpand,
     onSelect,
@@ -54,28 +44,11 @@ export const CommandListItem = memo(function CommandListItem({
     const isThreeLines = targetIslandLine !== null;
     // 青色（高速）の下は常に隙間なし。青色・黄色とも角丸なしの四角で統一する
     const roundedClass = 'rounded-none';
-    const borderClass = isFast
-        ? `${isConnectedToPrev ? 'border-t-0' : ''} ${isConnectedToNext ? 'border-b-0' : ''}`
-        : '';
-    const marginClass = isFast ? 'mb-0' : 'mb-2';
+    const borderClass = '';
+    const marginClass = 'mb-2';
 
     return (
         <div className="relative w-full select-none">
-            {/* 直上の挿入ライン */}
-            {isInsertAbove && (
-                <div
-                    data-testid="insert-target-line-above"
-                    className="absolute inset-x-0 -top-1 z-10 h-0.5 bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]"
-                />
-            )}
-            {/* 直下の挿入ライン */}
-            {isInsertBelow && (
-                <div
-                    data-testid="insert-target-line-below"
-                    className="absolute inset-x-0 -bottom-1 z-10 h-0.5 bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]"
-                />
-            )}
-
             <div
                 data-testid={`command-item-${command.id}`}
                 onClick={onSelect}
