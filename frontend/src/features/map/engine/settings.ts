@@ -33,7 +33,7 @@ export const MAP_VIEW_SETTINGS: MapConfig = {
     },
     renderOptions: {
         imageSmoothing: false, // 画像の平滑化（falseでドット絵をくっきり表示）
-        overlapPx: 0.5, // タイルの隙間を防ぐ微小オーバーラップ（px）
+        overlapPx: 0, // タイルの隙間を防ぐ微小オーバーラップ（px）
     },
 };
 

@@ -21,9 +21,6 @@ export function buildTerrainCache(params: BuildTerrainCacheParams): TerrainCache
 
     applyCanvasRenderOptions(ctx, renderOptions);
 
-    ctx.fillStyle = theme.outerSea;
-    ctx.fillRect(0, 0, width, height);
-
     const tileSize = baseTileSize;
     const renderSize = calcTileRenderSize(tileSize, renderOptions);
 
