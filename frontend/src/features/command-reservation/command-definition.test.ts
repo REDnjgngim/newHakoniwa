@@ -1,4 +1,4 @@
-import { getCommandDefinition, COMMAND_REGISTRY } from './command-definition';
+import { getCommandDefinition, COMMAND_REGISTRY } from './command-registry';
 
 describe('command-definition', () => {
     it('COMMAND_REGISTRY が空でない', () => {

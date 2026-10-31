@@ -2,8 +2,8 @@ import type { ReservationCommand } from '../types';
 import { mockFleets, mockIslands, mockItems } from '../mocks/command-reservation';
 import { IslandSearchSelect } from './IslandSearchSelect';
 import { TerrainIcon } from './TerrainIcon';
-import { getCommandDefinition, getCommandDefinitionByName } from '../command-definition';
-import type { ParameterSchema, SliderParamSchema, SelectParamSchema } from '../command-definition';
+import { getCommandDefinition, getCommandDefinitionByName } from '../command-registry';
+import type { ParameterSchema, SliderParamSchema, SelectParamSchema } from '../command-definition-types';
 
 export type CommandDetailEditorProps = {
     command: ReservationCommand;
