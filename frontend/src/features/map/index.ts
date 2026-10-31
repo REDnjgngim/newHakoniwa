@@ -28,10 +28,11 @@ export type {
     PointerPanZoomResult,
     ResolvedMapSettings,
     TerrainImageMap,
-    TileCoord,
     TileRange,
     ViewState,
 } from './types';
+// shared 由来の地形・座標型（中継削除後の直接公開）
+export type { Coordinate, SectorTerrainData, TerrainCell, TerrainType } from '../../shared/types/terrain';
 
 // 設定
 export {

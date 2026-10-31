@@ -1,8 +1,6 @@
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
 import type { SectorTerrainData, TerrainCell, TerrainType, TileCoord } from '../../shared/types/terrain';
 
-export type { Coordinate, TileCoord, TerrainType, TerrainCell, SectorTerrainData } from '../../shared/types/terrain';
-
 // マップ表示・描画設定の型定義
 export type MapRenderOptions = {
     /** 画像のスムージング（falseでドット絵をくっきり表示） */

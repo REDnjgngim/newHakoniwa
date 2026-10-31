@@ -1,7 +1,5 @@
 import type { Coordinate } from '../../shared/types/terrain';
 
-export type { Coordinate };
-
 export type CommandType = 'normal' | 'fast';
 
 export type ReservationCommand = {

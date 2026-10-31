@@ -1,7 +1,7 @@
-import { TERRAIN_IMAGE_MAP } from '../../../constants/terrain';
+import { TERRAIN_IMAGE_MAP } from '../../../shared/constants/terrain';
 import { getTerrainTypeAt } from '../../../shared/utils/terrain-lookup';
 import type { SectorTerrainData } from '../../../shared/types/terrain';
-import type { Coordinate } from '../types';
+import type { Coordinate } from '../../../shared/types/terrain';
 
 export type TerrainIconProps = {
     coordinate?: Coordinate;

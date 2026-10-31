@@ -1,4 +1,5 @@
-import type { LabelRange, TileCoord, TileRange, ViewState } from './types';
+import type { LabelRange, TileRange, ViewState } from './types';
+import type { TileCoord } from '../../shared/types/terrain';
 
 // 値を最小値・最大値の範囲内へ収める
 export function clamp(value: number, min: number, max: number): number {

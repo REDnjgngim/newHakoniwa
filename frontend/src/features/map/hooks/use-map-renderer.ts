@@ -6,7 +6,8 @@ import { drawBoundaryLine } from '../render/boundary-line';
 import { drawCoordLabels } from '../render/coord-labels';
 import { drawCornerCursor, getPulseScale } from '../render/corner-cursor';
 import { calcHoverFadeAlpha, drawHoverGuideLines } from '../render/hover-grid';
-import type { HoverState, ResolvedMapSettings, TileCoord, ViewState } from '../types';
+import type { HoverState, ResolvedMapSettings, ViewState } from '../types';
+import type { TileCoord } from '../../../shared/types/terrain';
 import { useTerrainImages } from './use-terrain-images';
 
 // ============================================================================
