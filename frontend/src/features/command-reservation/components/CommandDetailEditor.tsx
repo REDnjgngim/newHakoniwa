@@ -1,5 +1,4 @@
 import type { ReservationCommand } from '../types';
-import { mockFleets, mockIslands, mockItems } from '../mocks/command-reservation';
 import { IslandSearchSelect } from './IslandSearchSelect';
 import type { IslandSearchOption } from './IslandSearchSelect';
 import { TerrainIcon } from './TerrainIcon';
@@ -31,14 +30,17 @@ function toNumberParam(value: string | number | boolean | undefined, fallback: n
     return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
-export function CommandDetailEditor({ command, onUpdate }: CommandDetailEditorProps) {
+export function CommandDetailEditor({
+    command,
+    onUpdate,
+    islandOptions = [],
+    itemOptions = [],
+    fleetOptions = [],
+}: CommandDetailEditorProps) {
     const definition = resolveDefinition(command);
     const params = command.params ?? {};
     const targetIslandValue =
         typeof params.targetIsland === 'string' ? params.targetIsland : (command.targetIsland ?? null);
-    const islandOptions = mockIslands.map((island) => ({ value: island.name, label: island.name }));
-    const itemOptions = mockItems.map((item) => ({ value: item.name, label: item.name }));
-    const fleetOptions = mockFleets.map((fleet) => ({ value: fleet.name, label: fleet.name }));
 
     const handleCoordSelect = (axis: 'x' | 'y', next: number) => {
         onUpdate({

@@ -210,7 +210,7 @@ export const CommandListItem = memo(function CommandListItem({
                         } ${isExpanded ? '' : 'invisible'}`}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="min-w-0 overflow-hidden">{renderDetail?.(command)}</div>
+                        <div className="min-w-0 overflow-hidden">{isExpanded ? renderDetail?.(command) : null}</div>
                     </div>
                 </div>
 
