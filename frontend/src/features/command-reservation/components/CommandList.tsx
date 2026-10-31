@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import type { ReservationCommand } from '../types';
 import type { SectorTerrainData } from '@/shared/terrain-types';
 import type { IslandSearchOption } from './IslandSearchSelect';
@@ -66,6 +66,17 @@ export function CommandList({
             onSelectCommand(command);
         }
     };
+
+    const [isGrabEnlarged, setIsGrabEnlarged] = useState(false);
+
+    useEffect(() => {
+        if (!isPointerDragging) {
+            setIsGrabEnlarged(false);
+            return;
+        }
+        const frame = requestAnimationFrame(() => setIsGrabEnlarged(true));
+        return () => cancelAnimationFrame(frame);
+    }, [isPointerDragging]);
 
     const showTargetPlaceholder = isPointerDragging && draggingIndex !== null && dragOverIndex !== null;
 
@@ -144,10 +155,12 @@ export function CommandList({
                 )}
                 {isPointerDragging && draggedCommand !== null && floatingTop !== null && (
                     <div
-                        className="pointer-events-none absolute inset-x-2 z-20 opacity-90"
+                        className="pointer-events-none absolute inset-x-0 z-20 opacity-90"
                         style={{ top: floatingTop }}
                     >
-                        <div className="scale-[1.02] shadow-xl">
+                        <div
+                            className={`${isGrabEnlarged ? 'scale-[1.02]' : 'scale-100'} shadow-xl transition-transform duration-150 ease-out`}
+                        >
                             <CommandListItem
                                 command={draggedCommand}
                                 terrain={terrain}
