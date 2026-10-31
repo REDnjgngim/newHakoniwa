@@ -42,6 +42,8 @@ export type GameSessionActions = {
 };
 
 export type GameSessionContextValue = GameSessionState & GameSessionActions;
+export type GameSessionStateContextValue = GameSessionState;
+export type GameSessionActionsContextValue = GameSessionActions;
 
 export type GameSessionProviderProps = {
     children: ReactNode;

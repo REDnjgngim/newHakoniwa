@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { HTMLAttributes, ReactNode } from 'react';
 import type { ReservationCommand } from '../types';
 import { TerrainIcon } from './TerrainIcon';
@@ -23,7 +24,7 @@ export type CommandListItemProps = {
     dragHandleProps?: HTMLAttributes<HTMLDivElement>;
 };
 
-export function CommandListItem({
+export const CommandListItem = memo(function CommandListItem({
     command,
     displayOrder,
     isExpanded,
@@ -221,4 +222,4 @@ export function CommandListItem({
             </div>
         </div>
     );
-}
+});

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReservationCommand } from '../types';
 
 export type UseReservationHistoryReturn = {
@@ -26,23 +26,33 @@ export function useReservationHistory(initialCommands: ReservationCommand[]): Us
     const [future, setFuture] = useState<ReservationCommand[][]>([]);
     const [isDirty, setIsDirty] = useState<boolean>(false);
 
+    const pastRef = useRef<ReservationCommand[][]>(past);
+    const presentRef = useRef<ReservationCommand[]>(present);
+    const futureRef = useRef<ReservationCommand[][]>(future);
+
+    useEffect(() => {
+        pastRef.current = past;
+    }, [past]);
+    useEffect(() => {
+        presentRef.current = present;
+    }, [present]);
+    useEffect(() => {
+        futureRef.current = future;
+    }, [future]);
+
     // 新しい状態への遷移共通関数
-    // 中身が変わらない操作（getNext が current をそのまま返した場合）は
-    // past/future/isDirty を一切触らない（no-opガード）。
-    // updater の中で別の setState を呼ばない素直な形にするため、
-    // 現在値を直接読んで3つを順に更新する。StrictMode の二重実行でも
-    // 副作用が updater 内にないため冪等になる。
-    const setNextState = useCallback(
-        (getNext: (current: ReservationCommand[]) => ReservationCommand[]) => {
-            const next = getNext(present);
-            if (next === present) return;
-            setPast([...past, present]);
-            setFuture([]);
-            setPresent(next);
-            setIsDirty(true);
-        },
-        [past, present]
-    );
+    const setNextState = useCallback((getNext: (current: ReservationCommand[]) => ReservationCommand[]) => {
+        const current = presentRef.current;
+        const next = getNext(current);
+        if (next === current) return;
+        pastRef.current = [...pastRef.current, current];
+        futureRef.current = [];
+        presentRef.current = next;
+        setPast(pastRef.current);
+        setFuture([]);
+        setPresent(next);
+        setIsDirty(true);
+    }, []);
 
     const addCommand = useCallback(
         (command: ReservationCommand) => {
@@ -95,30 +105,41 @@ export function useReservationHistory(initialCommands: ReservationCommand[]): Us
     );
 
     const undo = useCallback(() => {
-        if (past.length === 0) return;
-        const previous = past[past.length - 1];
+        const p = pastRef.current;
+        if (p.length === 0) return;
+        const previous = p[p.length - 1];
         if (!previous) return;
-        setPast(past.slice(0, -1));
-        setFuture([present, ...future]);
+        pastRef.current = p.slice(0, -1);
+        futureRef.current = [presentRef.current, ...futureRef.current];
+        presentRef.current = previous;
+        setPast(pastRef.current);
+        setFuture(futureRef.current);
         setPresent(previous);
         setIsDirty(true);
-    }, [past, present, future]);
+    }, []);
 
     const redo = useCallback(() => {
-        if (future.length === 0) return;
-        const next = future[0];
+        const f = futureRef.current;
+        if (f.length === 0) return;
+        const next = f[0];
         if (!next) return;
-        setFuture(future.slice(1));
-        setPast([...past, present]);
+        futureRef.current = f.slice(1);
+        pastRef.current = [...pastRef.current, presentRef.current];
+        presentRef.current = next;
+        setFuture(futureRef.current);
+        setPast(pastRef.current);
         setPresent(next);
         setIsDirty(true);
-    }, [past, present, future]);
+    }, []);
 
     const markSaved = useCallback(() => {
         setIsDirty(false);
     }, []);
 
     const resetCommands = useCallback((newCommands: ReservationCommand[]) => {
+        pastRef.current = [];
+        presentRef.current = newCommands;
+        futureRef.current = [];
         setPast([]);
         setPresent(newCommands);
         setFuture([]);
