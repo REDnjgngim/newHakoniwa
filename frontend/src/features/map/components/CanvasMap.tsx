@@ -1,5 +1,5 @@
 import { useCallback, useRef, type PointerEvent } from 'react';
-import type { SectorTerrainData } from '../../../shared/types/terrain';
+import type { SectorTerrainData } from '@/shared/types/terrain';
 import {
     clampPanOffset,
     pixelToTile,

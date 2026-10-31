@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { Coordinate, SectorTerrainData } from '../../shared/types/terrain';
+import type { Coordinate, SectorTerrainData } from '@/shared/types/terrain';
 import type { IslandStatus } from '../island-status/types';
 import { useReservationHistory } from '../command-reservation/hooks/use-reservation-history';
 import { GameSessionContext } from './context';

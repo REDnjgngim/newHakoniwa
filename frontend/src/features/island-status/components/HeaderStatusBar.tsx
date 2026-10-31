@@ -1,5 +1,5 @@
 import type { HeaderStatusBarProps } from '../types';
-import { useSessionState } from '../../../shared/hooks/use-session-state';
+import { useSessionState } from '@/shared/hooks/use-session-state';
 
 // ============================================================================
 // ヘッダー情報表示領域（島ステータスバー）。

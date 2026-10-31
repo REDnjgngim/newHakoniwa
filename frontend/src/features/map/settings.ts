@@ -9,7 +9,7 @@ import type {
     ResolvedMapSettings,
     TerrainImageMap,
 } from './types';
-import { TERRAIN_IMAGE_MAP } from '../../shared/constants/terrain';
+import { TERRAIN_IMAGE_MAP } from '@/shared/constants/terrain';
 import { clamp } from './geometry';
 
 // マップ表示の基本設定値

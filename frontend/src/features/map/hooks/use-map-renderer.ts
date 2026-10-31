@@ -1,5 +1,5 @@
 import { useCallback, type RefObject } from 'react';
-import type { SectorTerrainData } from '../../../shared/types/terrain';
+import type { SectorTerrainData } from '@/shared/types/terrain';
 import { applyCanvasRenderOptions, calcTileRenderSize } from '../canvas';
 import { tileToPixel } from '../geometry';
 import { drawBoundaryLine } from '../render/boundary-line';
@@ -7,7 +7,7 @@ import { drawCoordLabels } from '../render/coord-labels';
 import { drawCornerCursor, getPulseScale } from '../render/corner-cursor';
 import { calcHoverFadeAlpha, drawHoverGuideLines } from '../render/hover-grid';
 import type { HoverState, ResolvedMapSettings, ViewState } from '../types';
-import type { TileCoord } from '../../../shared/types/terrain';
+import type { TileCoord } from '@/shared/types/terrain';
 import { useTerrainImages } from './use-terrain-images';
 
 // ============================================================================

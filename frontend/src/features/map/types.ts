@@ -1,5 +1,5 @@
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
-import type { SectorTerrainData, TerrainCell, TerrainType, TileCoord } from '../../shared/types/terrain';
+import type { SectorTerrainData, TerrainCell, TerrainType, TileCoord } from '@/shared/types/terrain';
 
 // マップ表示・描画設定の型定義
 export type MapRenderOptions = {

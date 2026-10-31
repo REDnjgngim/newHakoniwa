@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import type { SectorTerrainData } from '../../shared/types/terrain';
+import type { SectorTerrainData } from '@/shared/types/terrain';
 import type { IslandStatus } from '../island-status/types';
 import { GameSessionProvider } from './GameSessionProvider';
 
