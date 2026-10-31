@@ -1,5 +1,5 @@
 import terrainDataJson from './sector_terrain.json';
-import type { SectorTerrainData, TerrainType } from '@/shared/types/terrain';
+import type { SectorTerrainData, TerrainType } from '@/shared/terrain-types';
 
 // ============================================================================
 // モックJSONを地形ドメインの型として公開するローダ。

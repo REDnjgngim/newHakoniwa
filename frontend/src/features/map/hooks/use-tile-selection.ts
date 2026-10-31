@@ -1,7 +1,7 @@
 import { useCallback, type RefObject } from 'react';
-import type { SectorTerrainData } from '@/shared/types/terrain';
+import type { SectorTerrainData } from '@/shared/terrain-types';
 import type { AnimationLoopController, OnSelectTile } from '../types';
-import type { TileCoord } from '@/shared/types/terrain';
+import type { TileCoord } from '@/shared/terrain-types';
 
 // ============================================================================
 // タイル選択の確定処理を提供するフック。onSelect 通知・

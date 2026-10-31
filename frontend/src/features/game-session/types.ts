@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { Coordinate, SectorTerrainData } from '@/shared/types/terrain';
+import type { Coordinate, SectorTerrainData } from '@/shared/terrain-types';
 import type { IslandStatus } from '../island-status/types';
 import type { ReservationCommand } from '../command-reservation/types';
 

@@ -1,4 +1,4 @@
-import type { Coordinate } from '@/shared/types/terrain';
+import type { Coordinate } from '@/shared/terrain-types';
 
 export type CommandType = 'normal' | 'fast';
 

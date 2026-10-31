@@ -1,6 +1,6 @@
 import { HeaderStatusBar } from './features/island-status';
 import { HexMapPreview } from './features/map';
-import { Inspector, InspectorFrame } from './shared/components';
+import { Inspector, InspectorFrame } from './shared';
 import { CommandReservationPanel } from './features/command-reservation';
 import { useGameSession } from './features/game-session';
 

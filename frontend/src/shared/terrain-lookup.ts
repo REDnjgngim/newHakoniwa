@@ -1,4 +1,4 @@
-import type { Coordinate, SectorTerrainData, TerrainType } from '../types/terrain';
+import type { Coordinate, SectorTerrainData, TerrainType } from './terrain-types';
 
 /** コマンド座標に対応する地形種別を取得する（範囲外は undefined） */
 export function getTerrainTypeAt(sector: SectorTerrainData, coordinate?: Coordinate): TerrainType | undefined {

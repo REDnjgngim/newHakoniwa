@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { InspectorProps } from '../types/inspector';
+import type { InspectorProps } from './inspector-types';
 
 // ============================================================================
 // 画面上の独立した UI ブロック（マップ・コマンドリスト・島情報・ログ等）の境界。
