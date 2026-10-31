@@ -1,6 +1,7 @@
 import type { ReservationCommand } from '../types';
 import { mockFleets, mockIslands, mockItems } from '../mocks/command-reservation';
 import { IslandSearchSelect } from './IslandSearchSelect';
+import type { IslandSearchOption } from './IslandSearchSelect';
 import { TerrainIcon } from './TerrainIcon';
 import { getCommandDefinition, getCommandDefinitionByName } from '../command-registry';
 import type { ParameterSchema, SliderParamSchema, SelectParamSchema } from '../command-definition-types';
@@ -8,6 +9,9 @@ import type { ParameterSchema, SliderParamSchema, SelectParamSchema } from '../c
 export type CommandDetailEditorProps = {
     command: ReservationCommand;
     onUpdate: (updatedCommand: ReservationCommand) => void;
+    islandOptions?: IslandSearchOption[];
+    itemOptions?: IslandSearchOption[];
+    fleetOptions?: IslandSearchOption[];
 };
 
 function resolveDefinition(command: ReservationCommand) {

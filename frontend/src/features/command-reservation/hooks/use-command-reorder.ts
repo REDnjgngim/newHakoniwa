@@ -40,6 +40,14 @@ const CLICK_SUPPRESS_DY_PX = 8;
 /** PC・スマホ共通の Pointer Events による並び替え操作 */
 export function useCommandReorder(options: UseCommandReorderOptions): UseCommandReorderReturn {
     const { itemCount, viewportElementRef: viewportRef, onReorder } = options;
+    const itemCountRef = useRef(itemCount);
+    const onReorderRef = useRef(onReorder);
+    useEffect(() => {
+        itemCountRef.current = itemCount;
+    }, [itemCount]);
+    useEffect(() => {
+        onReorderRef.current = onReorder;
+    }, [onReorder]);
     const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
     const [dragOffsetY, setDragOffsetY] = useState(0);
@@ -61,7 +69,8 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
     const indexFromGeometry = useCallback(
         (clientY: number, excludeIndex: number | null): number | null => {
             const viewport = viewportRef.current;
-            if (!viewport || itemCount <= 0) return null;
+            const currentItemCount = itemCountRef.current;
+            if (!viewport || currentItemCount <= 0) return null;
             const rows = viewport.querySelectorAll('[data-command-row-index]');
             if (rows.length === 0) return null;
             let insertAt = 0;
@@ -69,7 +78,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             rows.forEach((row) => {
                 const raw = row.getAttribute('data-command-row-index');
                 const parsed = raw === null ? Number.NaN : Number(raw);
-                if (!Number.isInteger(parsed) || parsed < 0 || parsed >= itemCount) return;
+                if (!Number.isInteger(parsed) || parsed < 0 || parsed >= currentItemCount) return;
                 if (excludeIndex !== null && parsed === excludeIndex) return;
                 seen += 1;
                 const rect = row instanceof HTMLElement ? row.getBoundingClientRect() : null;
@@ -78,9 +87,9 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
                 if (clientY >= mid) insertAt += 1;
             });
             if (seen === 0) return excludeIndex;
-            return Math.max(0, Math.min(insertAt, itemCount - 1));
+            return Math.max(0, Math.min(insertAt, currentItemCount - 1));
         },
-        [itemCount, viewportRef]
+        [viewportRef]
     );
 
     const autoScrollViewport = useCallback(
@@ -163,7 +172,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             setIsPointerDragging(false);
             setDragOverIndex((currentOver) => {
                 const toIndex = hitIndex ?? currentOver;
-                if (toIndex !== null && toIndex !== fromIndex) onReorder(fromIndex, toIndex);
+                if (toIndex !== null && toIndex !== fromIndex) onReorderRef.current(fromIndex, toIndex);
                 return null;
             });
         };
@@ -195,7 +204,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             window.removeEventListener('click', handleClickCapture, true);
             window.removeEventListener('touchmove', handleTouchMove);
         };
-    }, [autoScrollViewport, clearPointerState, indexFromGeometry, onReorder]);
+    }, [clearPointerState, indexFromGeometry, autoScrollViewport]);
 
     return {
         draggingIndex,

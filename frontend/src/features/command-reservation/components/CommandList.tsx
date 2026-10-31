@@ -1,6 +1,8 @@
 import { useRef } from 'react';
 import type { ReservationCommand } from '../types';
 import type { SectorTerrainData } from '@/shared/terrain-types';
+import type { IslandSearchOption } from './IslandSearchSelect';
+import type { ReactNode } from 'react';
 import { CommandListItem } from './CommandListItem';
 import { CommandDetailEditor } from './CommandDetailEditor';
 import { useCommandReorder } from '../hooks/use-command-reorder';
@@ -10,6 +12,10 @@ export type CommandListProps = {
     terrain?: SectorTerrainData;
     expandedIds: Set<string>;
     focusedId: string | null;
+    islandOptions?: IslandSearchOption[];
+    itemOptions?: IslandSearchOption[];
+    fleetOptions?: IslandSearchOption[];
+    renderDetail?: (command: ReservationCommand) => ReactNode;
     onToggleExpand: (id: string) => void;
     onSelectCommand: (command: ReservationCommand | null) => void;
     onUpdateCommand: (id: string, partial: Partial<ReservationCommand>) => void;
@@ -93,12 +99,12 @@ export function CommandList({
                                 isInsertBelow={isInsertBelow}
                                 isConnectedToPrev={isConnectedToPrev}
                                 isConnectedToNext={isConnectedToNext}
-                                detailContent={
+                                renderDetail={(command) => (
                                     <CommandDetailEditor
-                                        command={cmd}
-                                        onUpdate={(updated) => onUpdateCommand(cmd.id, updated)}
+                                        command={command}
+                                        onUpdate={(updated) => onUpdateCommand(command.id, updated)}
                                     />
-                                }
+                                )}
                                 onToggleExpand={() => onToggleExpand(cmd.id)}
                                 onSelect={() => handleRowSelect(cmd)}
                                 onDelete={() => onDeleteCommand(cmd.id)}

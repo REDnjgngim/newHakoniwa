@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { ReservationCommand } from '../types';
 
 export type UseReservationHistoryReturn = {
@@ -29,16 +29,6 @@ export function useReservationHistory(initialCommands: ReservationCommand[]): Us
     const pastRef = useRef<ReservationCommand[][]>(past);
     const presentRef = useRef<ReservationCommand[]>(present);
     const futureRef = useRef<ReservationCommand[][]>(future);
-
-    useEffect(() => {
-        pastRef.current = past;
-    }, [past]);
-    useEffect(() => {
-        presentRef.current = present;
-    }, [present]);
-    useEffect(() => {
-        futureRef.current = future;
-    }, [future]);
 
     // 新しい状態への遷移共通関数
     const setNextState = useCallback((getNext: (current: ReservationCommand[]) => ReservationCommand[]) => {

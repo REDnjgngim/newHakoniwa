@@ -18,7 +18,7 @@ export type CommandListItemProps = {
     /** 直後が同じ種別（青色同士など）の場合に連結表示する */
     isConnectedToNext?: boolean;
     /** 展開時に中央列へ埋め込む詳細編集コンテンツ */
-    detailContent?: ReactNode;
+    renderDetail?: (command: ReservationCommand) => ReactNode;
     onToggleExpand: () => void;
     onSelect: () => void;
     onDelete: () => void;
@@ -36,7 +36,7 @@ export const CommandListItem = memo(function CommandListItem({
     isInsertBelow = false,
     isConnectedToPrev = false,
     isConnectedToNext = false,
-    detailContent,
+    renderDetail,
     onToggleExpand,
     onSelect,
     onDelete,
@@ -210,7 +210,7 @@ export const CommandListItem = memo(function CommandListItem({
                         } ${isExpanded ? '' : 'invisible'}`}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="min-w-0 overflow-hidden">{detailContent}</div>
+                        <div className="min-w-0 overflow-hidden">{renderDetail?.(command)}</div>
                     </div>
                 </div>
 

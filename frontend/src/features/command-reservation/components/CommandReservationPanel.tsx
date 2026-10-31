@@ -11,6 +11,18 @@ export type CommandReservationPanelProps = {
     onSelectCommand?: (command: ReservationCommand | null) => void;
 };
 
+export type CommandReservationPanelViewProps = {
+    commands: ReservationCommand[];
+    terrain?: unknown;
+    expandedIds: Set<string>;
+    focusedId: string | null;
+    islandOptions?: unknown[];
+    itemOptions?: unknown[];
+    fleetOptions?: unknown[];
+    renderDetail?: (command: ReservationCommand) => React.ReactNode;
+    handlers?: unknown;
+};
+
 export function CommandReservationPanel({ onSelectCommand }: CommandReservationPanelProps) {
     const {
         commands,
