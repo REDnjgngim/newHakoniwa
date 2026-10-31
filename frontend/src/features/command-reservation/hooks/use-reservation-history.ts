@@ -9,6 +9,7 @@ export type UseReservationHistoryReturn = {
     updateCommand: (id: string, partial: Partial<ReservationCommand>) => void;
     deleteCommand: (id: string) => void;
     reorderCommands: (fromIndex: number, toIndex: number) => void;
+    reorderCommandsById: (fromId: string, toId: string | null) => void;
     undo: () => void;
     redo: () => void;
     canUndo: boolean;
@@ -96,6 +97,26 @@ export function useReservationHistory(initialCommands: ReservationCommand[]): Us
         [setNextState]
     );
 
+    const reorderCommandsById = useCallback(
+        (fromId: string, toId: string | null) => {
+            setNextState((current) => {
+                const fromIndex = current.findIndex((c) => c.id === fromId);
+                if (fromIndex < 0) return current;
+                const updated = [...current];
+                const [movedItem] = updated.splice(fromIndex, 1);
+                if (!movedItem) return current;
+                if (toId === null) {
+                    updated.push(movedItem);
+                } else {
+                    const toIndex = updated.findIndex((c) => c.id === toId);
+                    if (toIndex < 0) return current;
+                    updated.splice(toIndex, 0, movedItem);
+                }
+                return updated;
+            });
+        },
+        [setNextState]
+    );
     const undo = useCallback(() => {
         const p = pastRef.current;
         if (p.length === 0) return;
@@ -144,6 +165,7 @@ export function useReservationHistory(initialCommands: ReservationCommand[]): Us
         updateCommand,
         deleteCommand,
         reorderCommands,
+        reorderCommandsById,
         undo,
         redo,
         canUndo: past.length > 0,

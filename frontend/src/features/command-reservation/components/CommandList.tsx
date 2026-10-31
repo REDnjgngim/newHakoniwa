@@ -20,7 +20,7 @@ export type CommandListProps = {
     onSelectCommand: (command: ReservationCommand | null) => void;
     onUpdateCommand: (id: string, partial: Partial<ReservationCommand>) => void;
     onDeleteCommand: (id: string) => void;
-    onReorderCommands: (fromIndex: number, toIndex: number) => void;
+    onReorderCommands: (fromId: string, toId: string | null) => void;
 };
 
 export function CommandList({
@@ -34,6 +34,14 @@ export function CommandList({
     onDeleteCommand,
     onReorderCommands,
 }: CommandListProps) {
+    const handleReorder = (fromIndex: number, toIndex: number) => {
+        const fromId = commands[fromIndex]?.id;
+        if (!fromId) return;
+        const nonDragged = commands.filter((_, i) => i !== fromIndex);
+        const toId = toIndex >= nonDragged.length ? null : (nonDragged[toIndex]?.id ?? null);
+        onReorderCommands(fromId, toId);
+    };
+
     const viewportRef = useRef<HTMLDivElement | null>(null);
     const {
         draggingIndex,
@@ -46,7 +54,7 @@ export function CommandList({
     } = useCommandReorder({
         itemCount: commands.length,
         viewportElementRef: viewportRef,
-        onReorder: onReorderCommands,
+        onReorder: handleReorder,
     });
 
     useEffect(() => {
@@ -67,7 +75,11 @@ export function CommandList({
         }
     };
 
+    const draggedCommand = draggingIndex !== null ? commands[draggingIndex] : null;
+
     const [isGrabEnlarged, setIsGrabEnlarged] = useState(false);
+
+    const currentFloatingTop = draggingItemTop !== null ? draggingItemTop + dragOffsetY : null;
 
     useEffect(() => {
         if (!isPointerDragging) {
@@ -105,7 +117,7 @@ export function CommandList({
                     key={cmd.id}
                     data-command-row-index={index}
                     onPointerDown={(e) => handlePointerDown(e, index)}
-                    className="touch-pan-y"
+                    className="touch-pan-y transition-all duration-150"
                 >
                     <CommandListItem
                         command={cmd}
@@ -142,8 +154,7 @@ export function CommandList({
         return rows;
     };
 
-    const draggedCommand = draggingIndex !== null ? commands[draggingIndex] : null;
-    const floatingTop = draggingItemTop !== null ? draggingItemTop + dragOffsetY : null;
+    const floatingTop = currentFloatingTop;
 
     return (
         <div ref={viewportRef} data-testid="command-list-container" className="flex-1 overflow-y-auto p-2 select-none">

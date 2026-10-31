@@ -25,7 +25,7 @@ export type CommandReservationPanelViewProps = {
 
 export function CommandReservationPanel({ onSelectCommand }: CommandReservationPanelProps) {
     const { commands, sectorTerrain } = useGameSessionState();
-    const { updateCommand, deleteCommand, reorderCommands, undo, redo, canUndo, canRedo, markSaved } =
+    const { updateCommand, deleteCommand, reorderCommandsById, undo, redo, canUndo, canRedo, markSaved } =
         useGameSessionActions();
     // タブ選択状態（デフォルト「予約」）
     const [activeTab, setActiveTab] = useState<TabType>('reservation');
@@ -105,7 +105,7 @@ export function CommandReservationPanel({ onSelectCommand }: CommandReservationP
                         onSelectCommand={handleSelectCommand}
                         onUpdateCommand={updateCommand}
                         onDeleteCommand={deleteCommand}
-                        onReorderCommands={reorderCommands}
+                        onReorderCommands={reorderCommandsById}
                     />
                     <PanelFooter
                         canUndo={canUndo}
