@@ -18,6 +18,7 @@ export type UseCommandReorderReturn = {
     dragOverIndex: number | null;
     dragOffsetY: number;
     isPointerDragging: boolean;
+    draggingItemHeight: number | null;
     handlePointerDown: (event: ReactPointerEvent<HTMLElement>, index: number) => void;
 };
 
@@ -51,6 +52,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
     const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
     const [dragOffsetY, setDragOffsetY] = useState(0);
+    const [draggingItemHeight, setDraggingItemHeight] = useState<number | null>(null);
     const [isPointerDragging, setIsPointerDragging] = useState(false);
     const pointerStateRef = useRef<PointerDragState | null>(null);
     const pointerActiveRef = useRef(false);
@@ -138,6 +140,8 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
         setDragOverIndex(index);
         setDragOffsetY(0);
         setIsPointerDragging(true);
+        const rowHeight = sourceElement?.getBoundingClientRect().height ?? null;
+        setDraggingItemHeight(rowHeight && rowHeight > 0 ? rowHeight : null);
         return;
     }, []);
 
@@ -170,6 +174,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             setDraggingIndex(null);
             setDragOffsetY(0);
             setIsPointerDragging(false);
+            setDraggingItemHeight(null);
             setDragOverIndex((currentOver) => {
                 const toIndex = hitIndex ?? currentOver;
                 if (toIndex !== null && toIndex !== fromIndex) onReorderRef.current(fromIndex, toIndex);
@@ -211,6 +216,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
         dragOverIndex,
         dragOffsetY,
         isPointerDragging,
+        draggingItemHeight,
         handlePointerDown,
     };
 }
