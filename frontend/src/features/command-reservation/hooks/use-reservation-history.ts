@@ -2,7 +2,9 @@ import { useCallback, useRef, useState } from 'react';
 import type { ReservationCommand } from '../types';
 
 export type UseReservationHistoryReturn = {
+    /** 現在の予約コマンドリスト（= present） */
     commands: ReservationCommand[];
+    /** 変更操作（履歴に積む） */
     addCommand: (command: ReservationCommand) => void;
     updateCommand: (id: string, partial: Partial<ReservationCommand>) => void;
     deleteCommand: (id: string) => void;

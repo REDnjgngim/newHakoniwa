@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { ReservationCommand, TabType } from '../types';
-import { useGameSession } from '../../game-session';
+import { useGameSessionState, useGameSessionActions } from '../../game-session';
 import { BottomSheetContainer } from './BottomSheetContainer';
 import { PanelTabBar } from './PanelTabBar';
 import { CommandList } from './CommandList';
@@ -24,18 +24,9 @@ export type CommandReservationPanelViewProps = {
 };
 
 export function CommandReservationPanel({ onSelectCommand }: CommandReservationPanelProps) {
-    const {
-        commands,
-        sectorTerrain,
-        updateCommand,
-        deleteCommand,
-        reorderCommands,
-        undo,
-        redo,
-        canUndo,
-        canRedo,
-        markSaved,
-    } = useGameSession();
+    const { commands, sectorTerrain } = useGameSessionState();
+    const { updateCommand, deleteCommand, reorderCommands, undo, redo, canUndo, canRedo, markSaved } =
+        useGameSessionActions();
     // タブ選択状態（デフォルト「予約」）
     const [activeTab, setActiveTab] = useState<TabType>('reservation');
 
@@ -79,7 +70,7 @@ export function CommandReservationPanel({ onSelectCommand }: CommandReservationP
                 return new Set();
             }
             // 1つでも閉じていれば全開
-            return new Set(commands.map((c) => c.id));
+            return new Set(commands.map((c: ReservationCommand) => c.id));
         });
     }, [commands]);
 
