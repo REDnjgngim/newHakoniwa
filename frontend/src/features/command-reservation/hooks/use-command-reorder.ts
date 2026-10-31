@@ -19,6 +19,7 @@ export type UseCommandReorderReturn = {
     dragOffsetY: number;
     isPointerDragging: boolean;
     draggingItemHeight: number | null;
+    draggingItemTop: number | null;
     handlePointerDown: (event: ReactPointerEvent<HTMLElement>, index: number) => void;
 };
 
@@ -31,6 +32,7 @@ type PointerDragState = {
     currentClientX: number;
     activated: boolean;
     grabOffsetY: number; // 追加: PointerDown時の行先頭からの相対Y
+    grabbedHeight: number; // 追加: ドラッグ対象行の高さ（中央軸計算用）
     sourceElement: HTMLElement | null;
 };
 
@@ -53,6 +55,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
     const [dragOffsetY, setDragOffsetY] = useState(0);
     const [draggingItemHeight, setDraggingItemHeight] = useState<number | null>(null);
+    const [draggingItemTop, setDraggingItemTop] = useState<number | null>(null);
     const [isPointerDragging, setIsPointerDragging] = useState(false);
     const pointerStateRef = useRef<PointerDragState | null>(null);
     const pointerActiveRef = useRef(false);
@@ -133,6 +136,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             currentClientX: event.clientX,
             activated: true,
             grabOffsetY,
+            grabbedHeight: rowRect ? rowRect.height : 0,
             sourceElement,
         };
         pointerActiveRef.current = true;
@@ -142,6 +146,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
         setIsPointerDragging(true);
         const rowHeight = sourceElement?.getBoundingClientRect().height ?? null;
         setDraggingItemHeight(rowHeight && rowHeight > 0 ? rowHeight : null);
+        setDraggingItemTop(sourceElement instanceof HTMLElement ? sourceElement.offsetTop : null);
         return;
     }, []);
 
@@ -153,7 +158,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             state.currentClientY = event.clientY;
             setDragOffsetY(event.clientY - state.startClientY);
             autoScrollViewport(event.clientY);
-            const adjustedY = event.clientY - state.grabOffsetY;
+            const adjustedY = event.clientY - state.grabOffsetY + state.grabbedHeight / 2;
             const hitIndex = indexFromGeometry(adjustedY, state.startIndex);
             if (hitIndex !== null) setDragOverIndex(hitIndex);
         };
@@ -164,7 +169,9 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             const wasActivated = state.activated;
             const fromIndex = state.startIndex;
             const movedDy = Math.abs(state.currentClientY - state.startClientY);
-            const hitIndex = cancelled ? null : indexFromGeometry(state.currentClientY - state.grabOffsetY, fromIndex);
+            const hitIndex = cancelled
+                ? null
+                : indexFromGeometry(state.currentClientY - state.grabOffsetY + state.grabbedHeight / 2, fromIndex);
             clearPointerState();
             if (!wasActivated) return;
             // ドラッグ直後の合成clickによる行選択の誤発火を抑止する
@@ -175,6 +182,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             setDragOffsetY(0);
             setIsPointerDragging(false);
             setDraggingItemHeight(null);
+            setDraggingItemTop(null);
             setDragOverIndex((currentOver) => {
                 const toIndex = hitIndex ?? currentOver;
                 if (toIndex !== null && toIndex !== fromIndex) onReorderRef.current(fromIndex, toIndex);
@@ -217,6 +225,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
         dragOffsetY,
         isPointerDragging,
         draggingItemHeight,
+        draggingItemTop,
         handlePointerDown,
     };
 }
