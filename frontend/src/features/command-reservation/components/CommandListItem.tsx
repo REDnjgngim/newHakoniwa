@@ -1,10 +1,12 @@
 import { memo } from 'react';
 import type { HTMLAttributes, ReactNode } from 'react';
 import type { ReservationCommand } from '../types';
+import type { SectorTerrainData } from '@/shared/terrain-types';
 import { TerrainIcon } from './TerrainIcon';
 
 export type CommandListItemProps = {
     command: ReservationCommand;
+    terrain?: SectorTerrainData;
     /** 表示番号（= index+1）。内部に order は持たないため描画時に渡す */
     displayOrder: number;
     isExpanded: boolean;
@@ -26,6 +28,7 @@ export type CommandListItemProps = {
 
 export const CommandListItem = memo(function CommandListItem({
     command,
+    terrain,
     displayOrder,
     isExpanded,
     isFocused,
@@ -151,7 +154,11 @@ export const CommandListItem = memo(function CommandListItem({
                                 )}
 
                                 {/* 地形アイコン（座標から取得した地形画像） */}
-                                <TerrainIcon coordinate={command.coordinate} size={isThreeLines ? 16 : 20} />
+                                <TerrainIcon
+                                    coordinate={command.coordinate}
+                                    terrain={terrain}
+                                    size={isThreeLines ? 16 : 20}
+                                />
 
                                 {/* コマンド名 */}
                                 <span

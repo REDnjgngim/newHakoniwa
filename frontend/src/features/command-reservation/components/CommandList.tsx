@@ -1,11 +1,13 @@
 import { useRef } from 'react';
 import type { ReservationCommand } from '../types';
+import type { SectorTerrainData } from '@/shared/terrain-types';
 import { CommandListItem } from './CommandListItem';
 import { CommandDetailEditor } from './CommandDetailEditor';
 import { useCommandReorder } from '../hooks/use-command-reorder';
 
 export type CommandListProps = {
     commands: ReservationCommand[];
+    terrain?: SectorTerrainData;
     expandedIds: Set<string>;
     focusedId: string | null;
     onToggleExpand: (id: string) => void;
@@ -17,6 +19,7 @@ export type CommandListProps = {
 
 export function CommandList({
     commands,
+    terrain,
     expandedIds,
     focusedId,
     onToggleExpand,
@@ -82,6 +85,7 @@ export function CommandList({
                         >
                             <CommandListItem
                                 command={cmd}
+                                terrain={terrain}
                                 displayOrder={index + 1}
                                 isExpanded={isExpanded}
                                 isFocused={isFocused}
