@@ -56,13 +56,16 @@ export function useMapRenderer(params: MapRendererParams): MapRendererResult {
     const renderRef = useRef<() => void>(() => {});
     const [imageVersion, setImageVersion] = useState(0);
     const images = useTerrainImages(settings.images, () => {
+        // 画像ロード完了時はステート更新のみ通知（setTimeout は削除）
         setImageVersion((v) => v + 1);
-        setTimeout(() => renderRef.current(), 0);
     });
 
     useEffect(() => {
+        // キャッシュを生成してセット
         const c = buildTerrainCache({ sector, settings, images });
         cacheRef.current = c;
+        // 最新キャッシュの準備が完了した直後に確実にメイン Canvas へ描画
+        renderRef.current();
     }, [sector, settings, images, imageVersion]);
 
     const render = useCallback(() => {
