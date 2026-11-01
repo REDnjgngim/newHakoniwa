@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useLayoutEffect } from 'react';
 import type { ReservationCommand } from '../types';
 import type { SectorTerrainData } from '@/shared/terrain-types';
 import type { IslandSearchOption } from './IslandSearchSelect';
@@ -50,12 +50,39 @@ export function CommandList({
         isPointerDragging,
         draggingItemHeight,
         draggingItemTop,
+        isSettling,
         handlePointerDown,
+        settleComplete,
     } = useCommandReorder({
         itemCount: commands.length,
         viewportElementRef: viewportRef,
         onReorder: handleReorder,
     });
+
+    const [settlingTargetTop, setSettlingTargetTop] = useState<number | null>(null);
+    const [settlingCommand, setSettlingCommand] = useState<ReservationCommand | null>(null);
+
+    useLayoutEffect(() => {
+        if (!isSettling) return;
+        const placeholder = viewportRef.current?.querySelector('[data-testid="drag-target-placeholder"]');
+        if (!(placeholder instanceof HTMLElement)) {
+            const frame = requestAnimationFrame(() => setSettlingTargetTop(draggingItemTop ?? floatingTop));
+            // fallback: if no target, complete
+            if (draggingItemTop === null && floatingTop === null) settleComplete();
+            return () => cancelAnimationFrame(frame);
+        }
+        const container = viewportRef.current?.querySelector('.relative');
+        if (!(container instanceof HTMLElement)) {
+            settleComplete();
+            return;
+        }
+        const containerRect = container.getBoundingClientRect();
+        const placeholderRect = placeholder.getBoundingClientRect();
+        const targetTop = placeholderRect.top - containerRect.top;
+        const frame = requestAnimationFrame(() => setSettlingTargetTop(targetTop));
+        return () => cancelAnimationFrame(frame);
+        // eslint-disable-next-line @eslint-react/exhaustive-deps
+    }, [isSettling, settleComplete, draggingItemTop]);
 
     useEffect(() => {
         if (isPointerDragging) {
@@ -77,6 +104,23 @@ export function CommandList({
 
     const draggedCommand = draggingIndex !== null ? commands[draggingIndex] : null;
 
+    const lastDraggedCommandRef = useRef<ReservationCommand | null>(null);
+    if (isPointerDragging && draggedCommand !== null) {
+        lastDraggedCommandRef.current = draggedCommand;
+    }
+    const floatingCommand = isSettling
+        ? (settlingCommand ?? lastDraggedCommandRef.current ?? draggedCommand)
+        : draggedCommand;
+
+    useEffect(() => {
+        if (isSettling && settlingCommand === null && draggedCommand !== null) {
+            setSettlingCommand(draggedCommand);
+        }
+        if (!isSettling) {
+            setSettlingCommand(null);
+        }
+    }, [isSettling, draggedCommand, settlingCommand]);
+
     const [isGrabEnlarged, setIsGrabEnlarged] = useState(false);
 
     const currentFloatingTop = draggingItemTop !== null ? draggingItemTop + dragOffsetY : null;
@@ -90,14 +134,16 @@ export function CommandList({
         return () => cancelAnimationFrame(frame);
     }, [isPointerDragging]);
 
-    const showTargetPlaceholder = isPointerDragging && draggingIndex !== null && dragOverIndex !== null;
+    const showTargetPlaceholder = (isPointerDragging || isSettling) && draggingIndex !== null && dragOverIndex !== null;
 
     const renderRows = () => {
         const rows: ReactNode[] = [];
         let nonDraggedSeen = 0;
 
         commands.forEach((cmd, index) => {
-            if (index === draggingIndex) return;
+            const settlingCmd = settlingCommand ?? draggedCommand;
+            if (isSettling && settlingCmd !== null && cmd.id === settlingCmd.id) return;
+            if (!isSettling && index === draggingIndex) return;
             const isExpanded = expandedIds.has(cmd.id);
             const isFocused = focusedId === cmd.id;
 
@@ -156,6 +202,41 @@ export function CommandList({
 
     const floatingTop = currentFloatingTop;
 
+    let floatingElement: ReactNode = null;
+    if ((isPointerDragging || isSettling) && floatingCommand !== null && floatingTop !== null) {
+        floatingElement = (
+            <div
+                className="pointer-events-none absolute inset-x-0 z-20 opacity-90"
+                style={{
+                    top: isSettling && settlingTargetTop !== null ? settlingTargetTop : floatingTop,
+                    transition: isSettling ? 'top 100ms ease-out' : undefined,
+                    opacity: 0.9,
+                }}
+                onTransitionEnd={() => {
+                    if (isSettling) {
+                        settleComplete();
+                        setSettlingTargetTop(null);
+                    }
+                }}
+            >
+                <div
+                    className={`${isGrabEnlarged ? 'scale-[1.03]' : 'scale-100'} shadow-xl transition-transform duration-100 ease-out`}
+                >
+                    <CommandListItem
+                        command={floatingCommand}
+                        terrain={terrain}
+                        displayOrder={draggingIndex === null ? 1 : draggingIndex + 1}
+                        isExpanded={expandedIds.has(floatingCommand.id)}
+                        isFocused={focusedId === floatingCommand.id}
+                        renderDetail={() => null}
+                        onToggleExpand={() => {}}
+                        onSelect={() => {}}
+                        onDelete={() => {}}
+                    />
+                </div>
+            </div>
+        );
+    }
     return (
         <div ref={viewportRef} data-testid="command-list-container" className="flex-1 overflow-y-auto p-2 select-none">
             <div className="relative">
@@ -164,28 +245,7 @@ export function CommandList({
                 ) : (
                     renderRows()
                 )}
-                {isPointerDragging && draggedCommand !== null && floatingTop !== null && (
-                    <div
-                        className="pointer-events-none absolute inset-x-0 z-20 opacity-90"
-                        style={{ top: floatingTop }}
-                    >
-                        <div
-                            className={`${isGrabEnlarged ? 'scale-[1.02]' : 'scale-100'} shadow-xl transition-transform duration-150 ease-out`}
-                        >
-                            <CommandListItem
-                                command={draggedCommand}
-                                terrain={terrain}
-                                displayOrder={draggingIndex === null ? 1 : draggingIndex + 1}
-                                isExpanded={expandedIds.has(draggedCommand.id)}
-                                isFocused={focusedId === draggedCommand.id}
-                                renderDetail={() => null}
-                                onToggleExpand={() => {}}
-                                onSelect={() => {}}
-                                onDelete={() => {}}
-                            />
-                        </div>
-                    </div>
-                )}
+                {floatingElement}
             </div>
         </div>
     );

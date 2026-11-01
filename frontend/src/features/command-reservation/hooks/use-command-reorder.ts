@@ -20,7 +20,9 @@ export type UseCommandReorderReturn = {
     isPointerDragging: boolean;
     draggingItemHeight: number | null;
     draggingItemTop: number | null;
+    isSettling: boolean;
     handlePointerDown: (event: ReactPointerEvent<HTMLElement>, index: number) => void;
+    settleComplete: () => void;
 };
 
 type PointerDragState = {
@@ -58,7 +60,9 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
     const [draggingItemHeight, setDraggingItemHeight] = useState<number | null>(null);
     const [draggingItemTop, setDraggingItemTop] = useState<number | null>(null);
     const [isPointerDragging, setIsPointerDragging] = useState(false);
+    const [isSettling, setIsSettling] = useState(false);
     const pointerStateRef = useRef<PointerDragState | null>(null);
+    const pendingReorderRef = useRef<{ fromIndex: number; toIndex: number } | null>(null);
     const pointerActiveRef = useRef(false);
     const suppressClickUntilRef = useRef(0);
 
@@ -185,14 +189,14 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             if (movedDy > CLICK_SUPPRESS_DY_PX || (hitIndex !== null && hitIndex !== fromIndex)) {
                 suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
             }
-            setDraggingIndex(null);
             setDragOffsetY(0);
             setIsPointerDragging(false);
-            setDraggingItemHeight(null);
-            setDraggingItemTop(null);
-            if (toIndex !== null && toIndex !== fromIndex) onReorderRef.current(fromIndex, toIndex);
-            setDragOverIndex(null);
-            dragOverIndexRef.current = null;
+            if (toIndex !== null && toIndex !== fromIndex) {
+                setIsSettling(true);
+                pendingReorderRef.current = { fromIndex, toIndex };
+            } else {
+                setIsSettling(true);
+            }
         };
 
         const handlePointerUp = (event: PointerEvent) => finishPointerDrag(event, false);
@@ -224,6 +228,22 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
         };
     }, [clearPointerState, indexFromGeometry, autoScrollViewport]);
 
+    const settleComplete = useCallback(() => {
+        const pending = pendingReorderRef.current;
+        if (pending) {
+            onReorderRef.current(pending.fromIndex, pending.toIndex);
+            pendingReorderRef.current = null;
+        }
+        setDraggingIndex(null);
+        setDragOffsetY(0);
+        setIsPointerDragging(false);
+        setDraggingItemHeight(null);
+        setDraggingItemTop(null);
+        setDragOverIndex(null);
+        dragOverIndexRef.current = null;
+        setIsSettling(false);
+    }, []);
+
     return {
         draggingIndex,
         dragOverIndex,
@@ -231,6 +251,8 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
         isPointerDragging,
         draggingItemHeight,
         draggingItemTop,
+        isSettling,
         handlePointerDown,
+        settleComplete,
     };
 }
