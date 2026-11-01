@@ -60,7 +60,7 @@ export const CommandListItem = memo(function CommandListItem({
                         onSelect();
                     }
                 }}
-                className={`relative flex min-h-13 cursor-pointer gap-1 overflow-hidden ${roundedClass} ${borderClass} border py-1 pr-2 pl-1 text-xs transition-[background-color,border-color,box-shadow] duration-200 sm:text-sm ${
+                className={`relative flex min-h-13 gap-1 overflow-hidden ${roundedClass} ${borderClass} border py-1 pr-2 pl-1 text-xs transition-[background-color,border-color,box-shadow] duration-200 sm:text-sm ${
                     isFast
                         ? `${marginClass} border-cyan-200/50 bg-linear-to-b from-[#0d7f9c] via-[#0080A0] to-[#046276] text-white shadow-[inset_0_1px_0_rgba(207,250,254,0.35),0_1px_6px_rgba(8,145,178,0.35)] hover:from-[#1093b1] hover:via-[#0092b5] hover:to-[#057183]`
                         : `${marginClass} border-amber-200/50 bg-linear-to-b from-[#e89a1d] via-[#d08000] to-[#9c5f00] text-white shadow-[inset_0_1px_0_rgba(254,243,199,0.4),0_1px_6px_rgba(180,83,9,0.35)] hover:from-[#f0a832] hover:via-[#dd8d0f] hover:to-[#a96a05]`

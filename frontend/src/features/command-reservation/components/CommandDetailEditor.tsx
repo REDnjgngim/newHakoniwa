@@ -111,7 +111,7 @@ export function CommandDetailEditor({
                                 type="button"
                                 aria-label="値を減らす"
                                 onClick={() => handleSliderValueChange(schema, sliderValue - 1)}
-                                className="shrink-0 rounded-full border border-current/30 px-2 leading-tight"
+                                className="shrink-0 cursor-pointer rounded-full border border-current/30 px-2 leading-tight"
                             >
                                 −
                             </button>
@@ -127,7 +127,7 @@ export function CommandDetailEditor({
                                 type="button"
                                 aria-label="値を増やす"
                                 onClick={() => handleSliderValueChange(schema, sliderValue + 1)}
-                                className="shrink-0 rounded-full border border-current/30 px-2 leading-tight"
+                                className="shrink-0 cursor-pointer rounded-full border border-current/30 px-2 leading-tight"
                             >
                                 ＋
                             </button>
