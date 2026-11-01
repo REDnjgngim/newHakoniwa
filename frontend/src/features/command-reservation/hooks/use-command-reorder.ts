@@ -42,6 +42,7 @@ const AUTO_SCROLL_MARGIN_PX = 56;
 const AUTO_SCROLL_STEP_PX = 8;
 const CLICK_SUPPRESS_MS = 400;
 const CLICK_SUPPRESS_DY_PX = 8;
+const COLLAPSED_ITEM_HEIGHT_PX = 60; // 縮小表示時の行の高さ（枠線込み）
 /** PC・スマホ共通の Pointer Events による並び替え操作 */
 export function useCommandReorder(options: UseCommandReorderOptions): UseCommandReorderReturn {
     const { itemCount, viewportElementRef: viewportRef, onReorder } = options;
@@ -137,7 +138,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             // capture不可でもwindowリスナーで継続する
         }
         const rowRect = sourceElement?.getBoundingClientRect();
-        const grabOffsetY = rowRect ? event.clientY - rowRect.top : 0;
+        const grabOffsetY = rowRect ? COLLAPSED_ITEM_HEIGHT_PX / 2 : 0;
         pointerStateRef.current = {
             pointerId: event.pointerId,
             startIndex: index,

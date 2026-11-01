@@ -47,7 +47,6 @@ export function CommandList({
         draggingIndex,
         dragOverIndex,
         isPointerDragging,
-        draggingItemHeight,
         draggingItemTop,
         isSettling,
         handlePointerDown,
@@ -152,7 +151,7 @@ export function CommandList({
                         key={`drag-target-placeholder-${dragOverIndex}`}
                         data-testid="drag-target-placeholder"
                         className="mb-2 rounded border-2 border-dashed border-slate-500/50 bg-slate-900/30"
-                        style={{ height: draggingItemHeight ?? undefined }}
+                        style={{ height: 52 }}
                     />
                 );
             }
@@ -191,7 +190,7 @@ export function CommandList({
                     key={`drag-target-placeholder-${dragOverIndex}`}
                     data-testid="drag-target-placeholder"
                     className="mb-2 rounded border-2 border-dashed border-slate-500/50 bg-slate-900/30"
-                    style={{ height: draggingItemHeight ?? undefined }}
+                    style={{ height: 52 }}
                 />
             );
         }
@@ -225,7 +224,7 @@ export function CommandList({
                         command={floatingCommand}
                         terrain={terrain}
                         displayOrder={draggingIndex === null ? 1 : draggingIndex + 1}
-                        isExpanded={expandedIds.has(floatingCommand.id)}
+                        isExpanded={false}
                         isFocused={focusedId === floatingCommand.id}
                         renderDetail={() => null}
                         onToggleExpand={() => {}}
