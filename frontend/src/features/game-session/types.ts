@@ -25,6 +25,7 @@ export type GameSessionActions = {
     deleteCommand: (id: string) => void;
     /** コマンド並び替えアクション */
     reorderCommands: (fromIndex: number, toIndex: number) => void;
+    reorderCommandsById: (fromId: string, toId: string | null) => void;
     /** 履歴Undo */
     undo: () => void;
     /** 履歴Redo */

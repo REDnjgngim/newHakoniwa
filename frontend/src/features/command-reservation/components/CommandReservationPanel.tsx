@@ -1,29 +1,33 @@
 import { useState, useCallback } from 'react';
 import type { ReservationCommand, TabType } from '../types';
-import { useGameSession } from '../../game-session';
+import { useGameSessionState, useGameSessionActions } from '../../game-session';
 import { BottomSheetContainer } from './BottomSheetContainer';
 import { PanelTabBar } from './PanelTabBar';
 import { CommandList } from './CommandList';
 import { PanelFooter } from './PanelFooter';
 import { ToastNotification } from './ToastNotification';
+import { mockIslands, mockItems, mockFleets } from '../mocks/command-reservation';
 
 export type CommandReservationPanelProps = {
     onSelectCommand?: (command: ReservationCommand | null) => void;
 };
 
+export type CommandReservationPanelViewProps = {
+    commands: ReservationCommand[];
+    terrain?: unknown;
+    expandedIds: Set<string>;
+    focusedId: string | null;
+    islandOptions?: unknown[];
+    itemOptions?: unknown[];
+    fleetOptions?: unknown[];
+    renderDetail?: (command: ReservationCommand) => React.ReactNode;
+    handlers?: unknown;
+};
+
 export function CommandReservationPanel({ onSelectCommand }: CommandReservationPanelProps) {
-    const {
-        commands,
-        sectorTerrain,
-        updateCommand,
-        deleteCommand,
-        reorderCommands,
-        undo,
-        redo,
-        canUndo,
-        canRedo,
-        markSaved,
-    } = useGameSession();
+    const { commands, sectorTerrain } = useGameSessionState();
+    const { updateCommand, deleteCommand, reorderCommandsById, undo, redo, canUndo, canRedo, markSaved } =
+        useGameSessionActions();
     // タブ選択状態（デフォルト「予約」）
     const [activeTab, setActiveTab] = useState<TabType>('reservation');
 
@@ -67,7 +71,7 @@ export function CommandReservationPanel({ onSelectCommand }: CommandReservationP
                 return new Set();
             }
             // 1つでも閉じていれば全開
-            return new Set(commands.map((c) => c.id));
+            return new Set(commands.map((c: ReservationCommand) => c.id));
         });
     }, [commands]);
 
@@ -102,7 +106,10 @@ export function CommandReservationPanel({ onSelectCommand }: CommandReservationP
                         onSelectCommand={handleSelectCommand}
                         onUpdateCommand={updateCommand}
                         onDeleteCommand={deleteCommand}
-                        onReorderCommands={reorderCommands}
+                        islandOptions={mockIslands.map((i) => ({ value: i.name, label: i.name }))}
+                        itemOptions={mockItems.map((i) => ({ value: i.name, label: i.name }))}
+                        fleetOptions={mockFleets.map((i) => ({ value: i.name, label: i.name }))}
+                        onReorderCommands={reorderCommandsById}
                     />
                     <PanelFooter
                         canUndo={canUndo}

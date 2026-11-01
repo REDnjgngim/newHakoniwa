@@ -1,18 +1,33 @@
-import { render } from '@testing-library/react';
+import { vi } from 'vitest';
 import { IslandSearchSelect } from './IslandSearchSelect';
+import { render, screen, fireEvent } from '@testing-library/react';
 
-describe('IslandSearchSelect', () => {
-    it('render できる', () => {
+describe('IslandSearchSelect extra', () => {
+    it('value が select に反映される（null は空文字）', () => {
         render(
             <IslandSearchSelect
-                value={null}
+                value="b"
                 onChange={() => {}}
-                options={[]}
-                label="目標"
-                labelSuffix="目標"
+                options={[
+                    { value: 'a', label: '島A' },
+                    { value: 'b', label: '島B' },
+                ]}
                 commandId="x"
             />
         );
-        expect(true).toBe(true);
+        expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('b');
+    });
+    it('選択時に onChange が呼ばれる', () => {
+        const onChange = vi.fn();
+        render(
+            <IslandSearchSelect
+                value={null}
+                onChange={onChange}
+                options={[{ value: 'a', label: '島A' }]}
+                commandId="x"
+            />
+        );
+        fireEvent.change(screen.getByRole('combobox'), { target: { value: 'a' } });
+        expect(onChange).toHaveBeenCalledWith('a');
     });
 });

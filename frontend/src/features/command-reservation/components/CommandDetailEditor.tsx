@@ -1,81 +1,58 @@
 import type { ReservationCommand } from '../types';
-import { mockFleets, mockIslands, mockItems } from '../mocks/command-reservation';
 import { IslandSearchSelect } from './IslandSearchSelect';
+import type { IslandSearchOption } from './IslandSearchSelect';
 import { TerrainIcon } from './TerrainIcon';
-import { getCommandDefinition, getCommandDefinitionByName } from '../command-registry';
+import {
+    resolveDefinition,
+    clampSliderValue,
+    buildCoordUpdate,
+    buildTargetIslandUpdate,
+    getSelectOptions,
+    computeSliderUpdate,
+    toNumberParam,
+} from '../command-detail-logic';
 import type { ParameterSchema, SliderParamSchema, SelectParamSchema } from '../command-definition-types';
 
 export type CommandDetailEditorProps = {
     command: ReservationCommand;
     onUpdate: (updatedCommand: ReservationCommand) => void;
+    islandOptions?: IslandSearchOption[];
+    itemOptions?: IslandSearchOption[];
+    fleetOptions?: IslandSearchOption[];
 };
 
-function resolveDefinition(command: ReservationCommand) {
-    if (command.commandCode) {
-        const def = getCommandDefinition(command.commandCode);
-        if (def) return def;
-    }
-    return getCommandDefinitionByName(command.name);
-}
-
-function clampSliderValue(value: number, min: number, max: number): number {
-    if (Number.isNaN(value)) return min;
-    return Math.min(max, Math.max(min, Math.floor(value)));
-}
-
-function toNumberParam(value: string | number | boolean | undefined, fallback: number): number {
-    return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
-export function CommandDetailEditor({ command, onUpdate }: CommandDetailEditorProps) {
+export function CommandDetailEditor({
+    command,
+    onUpdate,
+    islandOptions = [],
+    itemOptions = [],
+    fleetOptions = [],
+}: CommandDetailEditorProps) {
     const definition = resolveDefinition(command);
     const params = command.params ?? {};
     const targetIslandValue =
         typeof params.targetIsland === 'string' ? params.targetIsland : (command.targetIsland ?? null);
-    const islandOptions = mockIslands.map((island) => ({ value: island.name, label: island.name }));
-    const itemOptions = mockItems.map((item) => ({ value: item.name, label: item.name }));
-    const fleetOptions = mockFleets.map((fleet) => ({ value: fleet.name, label: fleet.name }));
 
     const handleCoordSelect = (axis: 'x' | 'y', next: number) => {
-        onUpdate({
-            ...command,
-            coordinate: {
-                x: axis === 'x' ? next : (command.coordinate?.x ?? 0),
-                y: axis === 'y' ? next : (command.coordinate?.y ?? 0),
-            },
-        });
+        onUpdate(buildCoordUpdate(command, axis, next));
     };
     const handleParamTextChange = (key: string, value: string) => {
         onUpdate({ ...command, params: { ...command.params, [key]: value } });
     };
     const handleTargetIslandChange = (islandName: string) => {
-        onUpdate({ ...command, targetIsland: islandName, params: { ...command.params, targetIsland: islandName } });
+        onUpdate(buildTargetIslandUpdate(command, islandName));
     };
 
-    const getSelectOptions = (schema: SelectParamSchema) => {
-        if (schema.kind === 'item-select') return itemOptions;
-        if (schema.kind === 'fleet-select') return fleetOptions;
-        return islandOptions;
-    };
+    const getSelectOptionsLocal = (schema: SelectParamSchema) =>
+        getSelectOptions(schema, islandOptions, itemOptions, fleetOptions);
 
     const handleSliderValueChange = (schema: SliderParamSchema, nextSliderValue: number) => {
-        const min = schema.min;
-        const max = schema.max;
-        const scale = schema.scale ?? 1;
-        const safeValue = clampSliderValue(nextSliderValue, min, max);
-        const updatedParams = { ...command.params };
-        const actualValue = safeValue * scale;
-        updatedParams[schema.key] = actualValue;
-        const summaryText = schema.unit
-            ? `${schema.label}: ${actualValue}${schema.unit}`
-            : `${schema.label}: ${safeValue}`;
-        const stackCountUpdate =
-            schema.key === 'stackCount' && command.commandCode === 'RECRUIT' ? safeValue : command.stackCount;
+        const result = computeSliderUpdate(schema, command, nextSliderValue);
         onUpdate({
             ...command,
-            summaryText,
-            stackCount: stackCountUpdate,
-            params: updatedParams,
+            summaryText: result.summaryText,
+            stackCount: result.stackCount,
+            params: result.updatedParams,
         });
     };
 
@@ -95,17 +72,22 @@ export function CommandDetailEditor({ command, onUpdate }: CommandDetailEditorPr
                     const max = schema.max;
                     const raw = toNumberParam(params[schema.key], min * scale);
                     const sliderValue = clampSliderValue(Math.round(raw / scale), min, max);
-                    const displayValue = schema.unit ? `${sliderValue * scale}${schema.unit}` : `${sliderValue}`;
                     return (
-                        <div key={schema.key} className="flex items-center justify-start gap-2 text-left text-xs">
-                            <span className="shrink-0">
-                                {schema.label}: {displayValue}
-                            </span>
+                        <div key={schema.key} className="flex items-center justify-start gap-1 text-left text-xs">
+                            <span className="shrink-0">数量:</span>
+                            <input
+                                type="number"
+                                min={min}
+                                max={max}
+                                value={sliderValue}
+                                onChange={(e) => handleSliderValueChange(schema, Number(e.target.value))}
+                                className="w-8 [appearance:textfield] rounded border border-white/30 bg-black/30 text-center text-white [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            />
                             <button
                                 type="button"
                                 aria-label="値を減らす"
                                 onClick={() => handleSliderValueChange(schema, sliderValue - 1)}
-                                className="shrink-0 rounded-full border border-current/30 px-2 leading-tight"
+                                className="shrink-0 cursor-pointer rounded-full border border-current/30 px-2 leading-tight"
                             >
                                 −
                             </button>
@@ -121,7 +103,7 @@ export function CommandDetailEditor({ command, onUpdate }: CommandDetailEditorPr
                                 type="button"
                                 aria-label="値を増やす"
                                 onClick={() => handleSliderValueChange(schema, sliderValue + 1)}
-                                className="shrink-0 rounded-full border border-current/30 px-2 leading-tight"
+                                className="shrink-0 cursor-pointer rounded-full border border-current/30 px-2 leading-tight"
                             >
                                 ＋
                             </button>
@@ -129,7 +111,7 @@ export function CommandDetailEditor({ command, onUpdate }: CommandDetailEditorPr
                     );
                 }
                 const selectSchema = schema;
-                const options = getSelectOptions(selectSchema);
+                const options = getSelectOptionsLocal(selectSchema);
                 const paramValue = params[selectSchema.key];
                 const value =
                     selectSchema.key === 'targetIsland'
