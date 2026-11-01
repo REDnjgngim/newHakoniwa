@@ -41,6 +41,7 @@ export const COMMAND_REGISTRY: CommandDefinition[] = [
                 label: '発射数',
                 min: 1,
                 max: 99,
+                unit: '発',
             },
             {
                 kind: 'island-select',

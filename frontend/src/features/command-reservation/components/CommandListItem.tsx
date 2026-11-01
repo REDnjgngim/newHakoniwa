@@ -100,7 +100,7 @@ export const CommandListItem = memo(function CommandListItem({
                         e.stopPropagation();
                         onToggleExpand();
                     }}
-                    className="self-center px-0.5 text-xs text-white/85 hover:cursor-pointer hover:text-white"
+                    className="self-stretch px-1 text-xs text-white/85 hover:cursor-pointer hover:text-white"
                 >
                     {isExpanded ? '▼' : '▶'}
                 </button>

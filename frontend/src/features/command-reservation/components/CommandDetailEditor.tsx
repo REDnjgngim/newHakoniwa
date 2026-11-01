@@ -104,9 +104,7 @@ export function CommandDetailEditor({
                     const displayValue = schema.unit ? `${sliderValue * scale}${schema.unit}` : `${sliderValue}`;
                     return (
                         <div key={schema.key} className="flex items-center justify-start gap-2 text-left text-xs">
-                            <span className="shrink-0">
-                                {schema.label}: {displayValue}
-                            </span>
+                            <span className="shrink-0">数量: {displayValue}</span>
                             <button
                                 type="button"
                                 aria-label="値を減らす"
