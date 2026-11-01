@@ -46,7 +46,6 @@ export function CommandList({
     const {
         draggingIndex,
         dragOverIndex,
-        dragOffsetY,
         isPointerDragging,
         draggingItemHeight,
         draggingItemTop,
@@ -123,7 +122,7 @@ export function CommandList({
 
     const [isGrabEnlarged, setIsGrabEnlarged] = useState(false);
 
-    const currentFloatingTop = draggingItemTop !== null ? draggingItemTop + dragOffsetY : null;
+    const currentFloatingTop = draggingItemTop;
 
     useEffect(() => {
         if (!isPointerDragging) {

@@ -113,6 +113,11 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             } else if (clientY > rect.bottom - AUTO_SCROLL_MARGIN_PX) {
                 viewport.scrollTop += AUTO_SCROLL_STEP_PX;
             }
+            const state = pointerStateRef.current;
+            if (state) {
+                const contentTop = state.currentClientY - state.grabOffsetY - rect.top + viewport.scrollTop;
+                setDraggingItemTop(contentTop);
+            }
         },
         [viewportRef]
     );
@@ -163,7 +168,13 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             if (!state || event.pointerId !== state.pointerId) return;
             state.currentClientX = event.clientX;
             state.currentClientY = event.clientY;
-            setDragOffsetY(event.clientY - state.startClientY);
+            const viewport = viewportRef.current;
+            if (viewport) {
+                const viewportRect = viewport.getBoundingClientRect();
+                const contentTop = event.clientY - state.grabOffsetY - viewportRect.top + viewport.scrollTop;
+                setDraggingItemTop(contentTop);
+            }
+            setDragOffsetY(0);
             autoScrollViewport(event.clientY);
             const adjustedY = event.clientY - state.grabOffsetY + state.grabbedHeight / 2;
             const hitIndex = indexFromGeometry(adjustedY, state.startIndex);
@@ -226,6 +237,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             window.removeEventListener('click', handleClickCapture, true);
             window.removeEventListener('touchmove', handleTouchMove);
         };
+        // eslint-disable-next-line @eslint-react/exhaustive-deps
     }, [clearPointerState, indexFromGeometry, autoScrollViewport]);
 
     const settleComplete = useCallback(() => {
