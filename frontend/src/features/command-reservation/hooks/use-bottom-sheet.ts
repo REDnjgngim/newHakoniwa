@@ -1,4 +1,11 @@
-import { useState, useCallback, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+    useState,
+    useCallback,
+    useRef,
+    useEffect,
+    type CSSProperties,
+    type PointerEvent as ReactPointerEvent,
+} from 'react';
 
 export type UseBottomSheetReturn = {
     sheetHeightVh: number;
@@ -19,6 +26,10 @@ const INITIAL_SHEET_VH = 50;
 
 export function useBottomSheet(): UseBottomSheetReturn {
     const [sheetHeightVh, setSheetHeightVh] = useState(INITIAL_SHEET_VH);
+    const sheetHeightVhRef = useRef(sheetHeightVh);
+    useEffect(() => {
+        sheetHeightVhRef.current = sheetHeightVh;
+    }, [sheetHeightVh]);
     const [isDraggingSheet, setIsDraggingSheet] = useState(false);
     const dragStateRef = useRef<{
         pointerId: number;
@@ -47,7 +58,7 @@ export function useBottomSheet(): UseBottomSheetReturn {
             dragStateRef.current = {
                 pointerId: event.pointerId,
                 startClientY: event.clientY,
-                startHeightVh: sheetHeightVh,
+                startHeightVh: sheetHeightVhRef.current,
             };
             setIsDraggingSheet(true);
 
@@ -77,7 +88,7 @@ export function useBottomSheet(): UseBottomSheetReturn {
             window.addEventListener('pointerup', handlePointerUp);
             window.addEventListener('pointercancel', handlePointerCancel);
         },
-        [finishSheetDrag, sheetHeightVh]
+        [finishSheetDrag]
     );
 
     const isSheetHidden = sheetHeightVh <= HIDDEN_THRESHOLD_VH;
