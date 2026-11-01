@@ -5,6 +5,7 @@ import type { IslandSearchOption } from './IslandSearchSelect';
 import type { ReactNode } from 'react';
 import { CommandListItem } from './CommandListItem';
 import { CommandDetailEditor } from './CommandDetailEditor';
+import { mapReorderIndicesToIds } from '../command-list-reorder';
 import { useCommandReorder } from '../hooks/use-command-reorder';
 
 export type CommandListProps = {
@@ -38,11 +39,9 @@ export function CommandList({
     onReorderCommands,
 }: CommandListProps) {
     const handleReorder = (fromIndex: number, toIndex: number) => {
-        const fromId = commands[fromIndex]?.id;
-        if (!fromId) return;
-        const nonDragged = commands.filter((_, i) => i !== fromIndex);
-        const toId = toIndex >= nonDragged.length ? null : (nonDragged[toIndex]?.id ?? null);
-        onReorderCommands(fromId, toId);
+        const result = mapReorderIndicesToIds(commands, fromIndex, toIndex);
+        if (!result) return;
+        onReorderCommands(result.fromId, result.toId);
     };
 
     const viewportRef = useRef<HTMLDivElement | null>(null);

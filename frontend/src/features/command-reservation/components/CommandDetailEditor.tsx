@@ -2,7 +2,15 @@ import type { ReservationCommand } from '../types';
 import { IslandSearchSelect } from './IslandSearchSelect';
 import type { IslandSearchOption } from './IslandSearchSelect';
 import { TerrainIcon } from './TerrainIcon';
-import { getCommandDefinition, getCommandDefinitionByName } from '../command-registry';
+import {
+    resolveDefinition,
+    clampSliderValue,
+    buildCoordUpdate,
+    buildTargetIslandUpdate,
+    getSelectOptions,
+    computeSliderUpdate,
+    toNumberParam,
+} from '../command-detail-logic';
 import type { ParameterSchema, SliderParamSchema, SelectParamSchema } from '../command-definition-types';
 
 export type CommandDetailEditorProps = {
@@ -12,23 +20,6 @@ export type CommandDetailEditorProps = {
     itemOptions?: IslandSearchOption[];
     fleetOptions?: IslandSearchOption[];
 };
-
-function resolveDefinition(command: ReservationCommand) {
-    if (command.commandCode) {
-        const def = getCommandDefinition(command.commandCode);
-        if (def) return def;
-    }
-    return getCommandDefinitionByName(command.name);
-}
-
-function clampSliderValue(value: number, min: number, max: number): number {
-    if (Number.isNaN(value)) return min;
-    return Math.min(max, Math.max(min, Math.floor(value)));
-}
-
-function toNumberParam(value: string | number | boolean | undefined, fallback: number): number {
-    return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
 
 export function CommandDetailEditor({
     command,
@@ -43,45 +34,25 @@ export function CommandDetailEditor({
         typeof params.targetIsland === 'string' ? params.targetIsland : (command.targetIsland ?? null);
 
     const handleCoordSelect = (axis: 'x' | 'y', next: number) => {
-        onUpdate({
-            ...command,
-            coordinate: {
-                x: axis === 'x' ? next : (command.coordinate?.x ?? 0),
-                y: axis === 'y' ? next : (command.coordinate?.y ?? 0),
-            },
-        });
+        onUpdate(buildCoordUpdate(command, axis, next));
     };
     const handleParamTextChange = (key: string, value: string) => {
         onUpdate({ ...command, params: { ...command.params, [key]: value } });
     };
     const handleTargetIslandChange = (islandName: string) => {
-        onUpdate({ ...command, targetIsland: islandName, params: { ...command.params, targetIsland: islandName } });
+        onUpdate(buildTargetIslandUpdate(command, islandName));
     };
 
-    const getSelectOptions = (schema: SelectParamSchema) => {
-        if (schema.kind === 'item-select') return itemOptions;
-        if (schema.kind === 'fleet-select') return fleetOptions;
-        return islandOptions;
-    };
+    const getSelectOptionsLocal = (schema: SelectParamSchema) =>
+        getSelectOptions(schema, islandOptions, itemOptions, fleetOptions);
 
     const handleSliderValueChange = (schema: SliderParamSchema, nextSliderValue: number) => {
-        const min = schema.min;
-        const max = schema.max;
-        const scale = schema.scale ?? 1;
-        const safeValue = clampSliderValue(nextSliderValue, min, max);
-        const updatedParams = { ...command.params };
-        const actualValue = safeValue * scale;
-        updatedParams[schema.key] = actualValue;
-        const summaryText = schema.unit
-            ? `${schema.label}: ${actualValue}${schema.unit}`
-            : `${schema.label}: ${safeValue}`;
-        const stackCountUpdate =
-            schema.key === 'stackCount' && command.commandCode === 'RECRUIT' ? safeValue : command.stackCount;
+        const result = computeSliderUpdate(schema, command, nextSliderValue);
         onUpdate({
             ...command,
-            summaryText,
-            stackCount: stackCountUpdate,
-            params: updatedParams,
+            summaryText: result.summaryText,
+            stackCount: result.stackCount,
+            params: result.updatedParams,
         });
     };
 
@@ -140,7 +111,7 @@ export function CommandDetailEditor({
                     );
                 }
                 const selectSchema = schema;
-                const options = getSelectOptions(selectSchema);
+                const options = getSelectOptionsLocal(selectSchema);
                 const paramValue = params[selectSchema.key];
                 const value =
                     selectSchema.key === 'targetIsland'

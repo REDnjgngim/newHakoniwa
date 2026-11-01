@@ -1,7 +1,7 @@
 import { useReducer, useCallback } from 'react';
 import type { ReservationCommand, TabType } from '../types';
 
-type PanelState = {
+export type PanelState = {
     activeTab: TabType;
     focusedId: string | null;
     expandedIds: Set<string>;
@@ -9,7 +9,7 @@ type PanelState = {
     isToastVisible: boolean;
 };
 
-type PanelAction =
+export type PanelAction =
     | { type: 'CHANGE_TAB'; tab: TabType }
     | { type: 'SELECT_COMMAND'; id: string | null }
     | { type: 'TOGGLE_EXPAND'; id: string }
@@ -17,7 +17,7 @@ type PanelAction =
     | { type: 'SHOW_TOAST'; message: string }
     | { type: 'HIDE_TOAST' };
 
-function reducer(state: PanelState, action: PanelAction): PanelState {
+export function reducer(state: PanelState, action: PanelAction): PanelState {
     switch (action.type) {
         case 'CHANGE_TAB':
             return { ...state, activeTab: action.tab };
