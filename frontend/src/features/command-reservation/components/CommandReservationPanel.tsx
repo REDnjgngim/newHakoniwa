@@ -6,6 +6,7 @@ import { PanelTabBar } from './PanelTabBar';
 import { CommandList } from './CommandList';
 import { PanelFooter } from './PanelFooter';
 import { ToastNotification } from './ToastNotification';
+import { mockIslands, mockItems, mockFleets } from '../mocks/command-reservation';
 
 export type CommandReservationPanelProps = {
     onSelectCommand?: (command: ReservationCommand | null) => void;
@@ -105,6 +106,9 @@ export function CommandReservationPanel({ onSelectCommand }: CommandReservationP
                         onSelectCommand={handleSelectCommand}
                         onUpdateCommand={updateCommand}
                         onDeleteCommand={deleteCommand}
+                        islandOptions={mockIslands.map((i) => ({ value: i.name, label: i.name }))}
+                        itemOptions={mockItems.map((i) => ({ value: i.name, label: i.name }))}
+                        fleetOptions={mockFleets.map((i) => ({ value: i.name, label: i.name }))}
                         onReorderCommands={reorderCommandsById}
                     />
                     <PanelFooter

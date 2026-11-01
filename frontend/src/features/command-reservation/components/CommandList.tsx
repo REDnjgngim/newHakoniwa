@@ -28,6 +28,9 @@ export function CommandList({
     terrain,
     expandedIds,
     focusedId,
+    islandOptions,
+    itemOptions,
+    fleetOptions,
     onToggleExpand,
     onSelectCommand,
     onUpdateCommand,
@@ -173,6 +176,9 @@ export function CommandList({
                             <CommandDetailEditor
                                 command={command}
                                 onUpdate={(updated) => onUpdateCommand(command.id, updated)}
+                                islandOptions={islandOptions}
+                                itemOptions={itemOptions}
+                                fleetOptions={fleetOptions}
                             />
                         )}
                         onToggleExpand={() => onToggleExpand(cmd.id)}
