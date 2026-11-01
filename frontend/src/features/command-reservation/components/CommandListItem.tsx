@@ -180,10 +180,10 @@ export const CommandListItem = memo(function CommandListItem({
                     <div
                         className={`grid min-w-0 text-left transition-[grid-template-rows,opacity] duration-200 ease-out ${
                             isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-                        } ${isExpanded ? '' : 'invisible'}`}
+                        }`}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="min-w-0 overflow-hidden">{isExpanded ? renderDetail?.(command) : null}</div>
+                        <div className="min-w-0 overflow-hidden">{renderDetail?.(command)}</div>
                     </div>
                 </div>
 

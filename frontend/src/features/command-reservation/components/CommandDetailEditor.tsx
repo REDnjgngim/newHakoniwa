@@ -101,10 +101,17 @@ export function CommandDetailEditor({
                     const max = schema.max;
                     const raw = toNumberParam(params[schema.key], min * scale);
                     const sliderValue = clampSliderValue(Math.round(raw / scale), min, max);
-                    const displayValue = schema.unit ? `${sliderValue * scale}${schema.unit}` : `${sliderValue}`;
                     return (
-                        <div key={schema.key} className="flex items-center justify-start gap-2 text-left text-xs">
-                            <span className="shrink-0">数量: {displayValue}</span>
+                        <div key={schema.key} className="flex items-center justify-start gap-1 text-left text-xs">
+                            <span className="shrink-0">数量:</span>
+                            <input
+                                type="number"
+                                min={min}
+                                max={max}
+                                value={sliderValue}
+                                onChange={(e) => handleSliderValueChange(schema, Number(e.target.value))}
+                                className="w-8 [appearance:textfield] rounded border border-white/30 bg-black/30 text-center text-white [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            />
                             <button
                                 type="button"
                                 aria-label="値を減らす"
