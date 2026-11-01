@@ -11,14 +11,8 @@ export type CommandListItemProps = {
     displayOrder: number;
     isExpanded: boolean;
     isFocused: boolean;
-    isInsertAbove?: boolean;
-    isInsertBelow?: boolean;
-    /** 直前が同じ種別（青色同士など）の場合に連結表示する */
-    isConnectedToPrev?: boolean;
-    /** 直後が同じ種別（青色同士など）の場合に連結表示する */
-    isConnectedToNext?: boolean;
     /** 展開時に中央列へ埋め込む詳細編集コンテンツ */
-    detailContent?: ReactNode;
+    renderDetail?: (command: ReservationCommand) => ReactNode;
     onToggleExpand: () => void;
     onSelect: () => void;
     onDelete: () => void;
@@ -32,11 +26,7 @@ export const CommandListItem = memo(function CommandListItem({
     displayOrder,
     isExpanded,
     isFocused,
-    isInsertAbove = false,
-    isInsertBelow = false,
-    isConnectedToPrev = false,
-    isConnectedToNext = false,
-    detailContent,
+    renderDetail,
     onToggleExpand,
     onSelect,
     onDelete,
@@ -54,28 +44,11 @@ export const CommandListItem = memo(function CommandListItem({
     const isThreeLines = targetIslandLine !== null;
     // 青色（高速）の下は常に隙間なし。青色・黄色とも角丸なしの四角で統一する
     const roundedClass = 'rounded-none';
-    const borderClass = isFast
-        ? `${isConnectedToPrev ? 'border-t-0' : ''} ${isConnectedToNext ? 'border-b-0' : ''}`
-        : '';
-    const marginClass = isFast ? 'mb-0' : 'mb-2';
+    const borderClass = '';
+    const marginClass = 'mb-2';
 
     return (
         <div className="relative w-full select-none">
-            {/* 直上の挿入ライン */}
-            {isInsertAbove && (
-                <div
-                    data-testid="insert-target-line-above"
-                    className="absolute inset-x-0 -top-1 z-10 h-0.5 bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]"
-                />
-            )}
-            {/* 直下の挿入ライン */}
-            {isInsertBelow && (
-                <div
-                    data-testid="insert-target-line-below"
-                    className="absolute inset-x-0 -bottom-1 z-10 h-0.5 bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]"
-                />
-            )}
-
             <div
                 data-testid={`command-item-${command.id}`}
                 onClick={onSelect}
@@ -87,7 +60,7 @@ export const CommandListItem = memo(function CommandListItem({
                         onSelect();
                     }
                 }}
-                className={`relative flex min-h-13 cursor-pointer gap-1 overflow-hidden ${roundedClass} ${borderClass} border py-1 pr-2 pl-1 text-xs transition-[background-color,border-color,box-shadow] duration-200 sm:text-sm ${
+                className={`relative flex min-h-13 gap-1 overflow-hidden ${roundedClass} ${borderClass} border py-1 pr-2 pl-1 text-xs transition-[background-color,border-color,box-shadow] duration-200 sm:text-sm ${
                     isFast
                         ? `${marginClass} border-cyan-200/50 bg-linear-to-b from-[#0d7f9c] via-[#0080A0] to-[#046276] text-white shadow-[inset_0_1px_0_rgba(207,250,254,0.35),0_1px_6px_rgba(8,145,178,0.35)] hover:from-[#1093b1] hover:via-[#0092b5] hover:to-[#057183]`
                         : `${marginClass} border-amber-200/50 bg-linear-to-b from-[#e89a1d] via-[#d08000] to-[#9c5f00] text-white shadow-[inset_0_1px_0_rgba(254,243,199,0.4),0_1px_6px_rgba(180,83,9,0.35)] hover:from-[#f0a832] hover:via-[#dd8d0f] hover:to-[#a96a05]`
@@ -127,7 +100,7 @@ export const CommandListItem = memo(function CommandListItem({
                         e.stopPropagation();
                         onToggleExpand();
                     }}
-                    className="self-center px-0.5 text-xs text-white/85 hover:cursor-pointer hover:text-white"
+                    className="self-stretch px-1 text-xs text-white/85 hover:cursor-pointer hover:text-white"
                 >
                     {isExpanded ? '▼' : '▶'}
                 </button>
@@ -207,10 +180,10 @@ export const CommandListItem = memo(function CommandListItem({
                     <div
                         className={`grid min-w-0 text-left transition-[grid-template-rows,opacity] duration-200 ease-out ${
                             isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-                        } ${isExpanded ? '' : 'invisible'}`}
+                        }`}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="min-w-0 overflow-hidden">{detailContent}</div>
+                        <div className="min-w-0 overflow-hidden">{renderDetail?.(command)}</div>
                     </div>
                 </div>
 

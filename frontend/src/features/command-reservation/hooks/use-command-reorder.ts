@@ -18,7 +18,11 @@ export type UseCommandReorderReturn = {
     dragOverIndex: number | null;
     dragOffsetY: number;
     isPointerDragging: boolean;
+    draggingItemHeight: number | null;
+    draggingItemTop: number | null;
+    isSettling: boolean;
     handlePointerDown: (event: ReactPointerEvent<HTMLElement>, index: number) => void;
+    settleComplete: () => void;
 };
 
 type PointerDragState = {
@@ -30,6 +34,7 @@ type PointerDragState = {
     currentClientX: number;
     activated: boolean;
     grabOffsetY: number; // 追加: PointerDown時の行先頭からの相対Y
+    grabbedHeight: number; // 追加: ドラッグ対象行の高さ（中央軸計算用）
     sourceElement: HTMLElement | null;
 };
 
@@ -37,20 +42,35 @@ const AUTO_SCROLL_MARGIN_PX = 56;
 const AUTO_SCROLL_STEP_PX = 8;
 const CLICK_SUPPRESS_MS = 400;
 const CLICK_SUPPRESS_DY_PX = 8;
+const COLLAPSED_ITEM_HEIGHT_PX = 60; // 縮小表示時の行の高さ（枠線込み）
 /** PC・スマホ共通の Pointer Events による並び替え操作 */
 export function useCommandReorder(options: UseCommandReorderOptions): UseCommandReorderReturn {
     const { itemCount, viewportElementRef: viewportRef, onReorder } = options;
+    const itemCountRef = useRef(itemCount);
+    const onReorderRef = useRef(onReorder);
+    useEffect(() => {
+        itemCountRef.current = itemCount;
+    }, [itemCount]);
+    useEffect(() => {
+        onReorderRef.current = onReorder;
+    }, [onReorder]);
     const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+    const dragOverIndexRef = useRef<number | null>(null);
     const [dragOffsetY, setDragOffsetY] = useState(0);
+    const [draggingItemHeight, setDraggingItemHeight] = useState<number | null>(null);
+    const [draggingItemTop, setDraggingItemTop] = useState<number | null>(null);
     const [isPointerDragging, setIsPointerDragging] = useState(false);
+    const [isSettling, setIsSettling] = useState(false);
     const pointerStateRef = useRef<PointerDragState | null>(null);
+    const pendingReorderRef = useRef<{ fromIndex: number; toIndex: number } | null>(null);
     const pointerActiveRef = useRef(false);
     const suppressClickUntilRef = useRef(0);
 
     const clearPointerState = useCallback(() => {
         pointerStateRef.current = null;
         pointerActiveRef.current = false;
+        dragOverIndexRef.current = null;
     }, []);
 
     /**
@@ -61,7 +81,8 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
     const indexFromGeometry = useCallback(
         (clientY: number, excludeIndex: number | null): number | null => {
             const viewport = viewportRef.current;
-            if (!viewport || itemCount <= 0) return null;
+            const currentItemCount = itemCountRef.current;
+            if (!viewport || currentItemCount <= 0) return null;
             const rows = viewport.querySelectorAll('[data-command-row-index]');
             if (rows.length === 0) return null;
             let insertAt = 0;
@@ -69,7 +90,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             rows.forEach((row) => {
                 const raw = row.getAttribute('data-command-row-index');
                 const parsed = raw === null ? Number.NaN : Number(raw);
-                if (!Number.isInteger(parsed) || parsed < 0 || parsed >= itemCount) return;
+                if (!Number.isInteger(parsed) || parsed < 0 || parsed >= currentItemCount) return;
                 if (excludeIndex !== null && parsed === excludeIndex) return;
                 seen += 1;
                 const rect = row instanceof HTMLElement ? row.getBoundingClientRect() : null;
@@ -78,9 +99,9 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
                 if (clientY >= mid) insertAt += 1;
             });
             if (seen === 0) return excludeIndex;
-            return Math.max(0, Math.min(insertAt, itemCount - 1));
+            return Math.max(0, Math.min(insertAt, currentItemCount - 1));
         },
-        [itemCount, viewportRef]
+        [viewportRef]
     );
 
     const autoScrollViewport = useCallback(
@@ -92,6 +113,11 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
                 viewport.scrollTop -= AUTO_SCROLL_STEP_PX;
             } else if (clientY > rect.bottom - AUTO_SCROLL_MARGIN_PX) {
                 viewport.scrollTop += AUTO_SCROLL_STEP_PX;
+            }
+            const state = pointerStateRef.current;
+            if (state) {
+                const contentTop = state.currentClientY - state.grabOffsetY - rect.top + viewport.scrollTop;
+                setDraggingItemTop(contentTop);
             }
         },
         [viewportRef]
@@ -112,7 +138,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             // capture不可でもwindowリスナーで継続する
         }
         const rowRect = sourceElement?.getBoundingClientRect();
-        const grabOffsetY = rowRect ? event.clientY - rowRect.top : 0;
+        const grabOffsetY = rowRect ? COLLAPSED_ITEM_HEIGHT_PX / 2 : 0;
         pointerStateRef.current = {
             pointerId: event.pointerId,
             startIndex: index,
@@ -122,13 +148,18 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             currentClientX: event.clientX,
             activated: true,
             grabOffsetY,
+            grabbedHeight: rowRect ? rowRect.height : 0,
             sourceElement,
         };
         pointerActiveRef.current = true;
         setDraggingIndex(index);
         setDragOverIndex(index);
+        dragOverIndexRef.current = index;
         setDragOffsetY(0);
         setIsPointerDragging(true);
+        const rowHeight = sourceElement?.getBoundingClientRect().height ?? null;
+        setDraggingItemHeight(rowHeight && rowHeight > 0 ? rowHeight : null);
+        setDraggingItemTop(sourceElement instanceof HTMLElement ? sourceElement.offsetTop : null);
         return;
     }, []);
 
@@ -138,11 +169,20 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             if (!state || event.pointerId !== state.pointerId) return;
             state.currentClientX = event.clientX;
             state.currentClientY = event.clientY;
-            setDragOffsetY(event.clientY - state.startClientY);
+            const viewport = viewportRef.current;
+            if (viewport) {
+                const viewportRect = viewport.getBoundingClientRect();
+                const contentTop = event.clientY - state.grabOffsetY - viewportRect.top + viewport.scrollTop;
+                setDraggingItemTop(contentTop);
+            }
+            setDragOffsetY(0);
             autoScrollViewport(event.clientY);
-            const adjustedY = event.clientY - state.grabOffsetY;
+            const adjustedY = event.clientY - state.grabOffsetY + state.grabbedHeight / 2;
             const hitIndex = indexFromGeometry(adjustedY, state.startIndex);
-            if (hitIndex !== null) setDragOverIndex(hitIndex);
+            if (hitIndex !== null) {
+                setDragOverIndex(hitIndex);
+                dragOverIndexRef.current = hitIndex;
+            }
         };
 
         const finishPointerDrag = (event: PointerEvent, cancelled: boolean) => {
@@ -151,21 +191,24 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             const wasActivated = state.activated;
             const fromIndex = state.startIndex;
             const movedDy = Math.abs(state.currentClientY - state.startClientY);
-            const hitIndex = cancelled ? null : indexFromGeometry(state.currentClientY - state.grabOffsetY, fromIndex);
+            const hitIndex = cancelled
+                ? null
+                : indexFromGeometry(state.currentClientY - state.grabOffsetY + state.grabbedHeight / 2, fromIndex);
+            const toIndex = dragOverIndexRef.current;
             clearPointerState();
             if (!wasActivated) return;
             // ドラッグ直後の合成clickによる行選択の誤発火を抑止する
             if (movedDy > CLICK_SUPPRESS_DY_PX || (hitIndex !== null && hitIndex !== fromIndex)) {
                 suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
             }
-            setDraggingIndex(null);
             setDragOffsetY(0);
             setIsPointerDragging(false);
-            setDragOverIndex((currentOver) => {
-                const toIndex = hitIndex ?? currentOver;
-                if (toIndex !== null && toIndex !== fromIndex) onReorder(fromIndex, toIndex);
-                return null;
-            });
+            if (toIndex !== null && toIndex !== fromIndex) {
+                setIsSettling(true);
+                pendingReorderRef.current = { fromIndex, toIndex };
+            } else {
+                setIsSettling(true);
+            }
         };
 
         const handlePointerUp = (event: PointerEvent) => finishPointerDrag(event, false);
@@ -195,13 +238,34 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             window.removeEventListener('click', handleClickCapture, true);
             window.removeEventListener('touchmove', handleTouchMove);
         };
-    }, [autoScrollViewport, clearPointerState, indexFromGeometry, onReorder]);
+        // eslint-disable-next-line @eslint-react/exhaustive-deps
+    }, [clearPointerState, indexFromGeometry, autoScrollViewport]);
+
+    const settleComplete = useCallback(() => {
+        const pending = pendingReorderRef.current;
+        if (pending) {
+            onReorderRef.current(pending.fromIndex, pending.toIndex);
+            pendingReorderRef.current = null;
+        }
+        setDraggingIndex(null);
+        setDragOffsetY(0);
+        setIsPointerDragging(false);
+        setDraggingItemHeight(null);
+        setDraggingItemTop(null);
+        setDragOverIndex(null);
+        dragOverIndexRef.current = null;
+        setIsSettling(false);
+    }, []);
 
     return {
         draggingIndex,
         dragOverIndex,
         dragOffsetY,
         isPointerDragging,
+        draggingItemHeight,
+        draggingItemTop,
+        isSettling,
         handlePointerDown,
+        settleComplete,
     };
 }
