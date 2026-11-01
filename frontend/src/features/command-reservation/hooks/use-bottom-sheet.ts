@@ -1,0 +1,100 @@
+import { useState, useCallback, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+
+export type UseBottomSheetReturn = {
+    sheetHeightVh: number;
+    isSheetHidden: boolean;
+    isDraggingSheet: boolean;
+    sheetCssVars: CSSProperties;
+    handleDragHandlePointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
+};
+
+// 取っ手のみが見える最小高さ (dvh)
+const MIN_SHEET_VH = 2.5;
+// ドラッグで広げられる最大高さ (dvh)
+const MAX_SHEET_VH = 96;
+// この値以下になったらコンテンツを非表示にする閾値 (dvh)
+const HIDDEN_THRESHOLD_VH = 8;
+// 初期表示時の高さ (dvh)
+const INITIAL_SHEET_VH = 50;
+
+export function useBottomSheet(): UseBottomSheetReturn {
+    const [sheetHeightVh, setSheetHeightVh] = useState(INITIAL_SHEET_VH);
+    const [isDraggingSheet, setIsDraggingSheet] = useState(false);
+    const dragStateRef = useRef<{
+        pointerId: number;
+        startClientY: number;
+        startHeightVh: number;
+    } | null>(null);
+
+    const finishSheetDrag = useCallback((cancelled: boolean) => {
+        const state = dragStateRef.current;
+        dragStateRef.current = null;
+        setIsDraggingSheet(false);
+        if (!state || cancelled) return;
+        // 閾値以下まで下げた場合、取っ手のみが残る最小高さへ吸着させる
+        setSheetHeightVh((prev) => (prev <= HIDDEN_THRESHOLD_VH ? MIN_SHEET_VH : prev));
+    }, []);
+
+    const handleDragHandlePointerDown = useCallback(
+        (event: ReactPointerEvent<HTMLElement>) => {
+            if (event.pointerType === 'mouse' && event.button !== 0) return;
+            const sourceElement = event.currentTarget;
+            try {
+                sourceElement?.setPointerCapture?.(event.pointerId);
+            } catch {
+                // capture不可でも継続する
+            }
+            dragStateRef.current = {
+                pointerId: event.pointerId,
+                startClientY: event.clientY,
+                startHeightVh: sheetHeightVh,
+            };
+            setIsDraggingSheet(true);
+
+            const handlePointerMove = (moveEvent: PointerEvent) => {
+                const state = dragStateRef.current;
+                if (!state || moveEvent.pointerId !== state.pointerId) return;
+                const dyPx = moveEvent.clientY - state.startClientY;
+                const viewportH = window.innerHeight || 1;
+                const nextVh = state.startHeightVh - (dyPx / viewportH) * 100;
+                setSheetHeightVh(Math.max(MIN_SHEET_VH, Math.min(MAX_SHEET_VH, nextVh)));
+            };
+            const handlePointerUp = (upEvent: PointerEvent) => {
+                if (dragStateRef.current?.pointerId !== upEvent.pointerId) return;
+                window.removeEventListener('pointermove', handlePointerMove);
+                window.removeEventListener('pointerup', handlePointerUp);
+                window.removeEventListener('pointercancel', handlePointerCancel);
+                finishSheetDrag(false);
+            };
+            const handlePointerCancel = (cancelEvent: PointerEvent) => {
+                if (dragStateRef.current?.pointerId !== cancelEvent.pointerId) return;
+                window.removeEventListener('pointermove', handlePointerMove);
+                window.removeEventListener('pointerup', handlePointerUp);
+                window.removeEventListener('pointercancel', handlePointerCancel);
+                finishSheetDrag(true);
+            };
+            window.addEventListener('pointermove', handlePointerMove);
+            window.addEventListener('pointerup', handlePointerUp);
+            window.addEventListener('pointercancel', handlePointerCancel);
+        },
+        [finishSheetDrag, sheetHeightVh]
+    );
+
+    const isSheetHidden = sheetHeightVh <= HIDDEN_THRESHOLD_VH;
+
+    const sheetCssVars: CSSProperties & {
+        '--sheet-height': string;
+        '--sheet-transition': string;
+    } = {
+        '--sheet-height': `${sheetHeightVh}dvh`,
+        '--sheet-transition': isDraggingSheet ? 'none' : 'height 0.15s ease-out',
+    };
+
+    return {
+        sheetHeightVh,
+        isSheetHidden,
+        sheetCssVars,
+        handleDragHandlePointerDown,
+        isDraggingSheet,
+    };
+}

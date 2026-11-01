@@ -40,6 +40,7 @@ export default [
         rules: {
             ...reactPlugin.configs.recommended.rules,
             'react-refresh/only-export-components': 'off',
+            'react/react-in-jsx-scope': 'off',
         },
     },
     {
@@ -69,6 +70,27 @@ export default [
             'better-tailwindcss/enforce-canonical-classes': 'error',
             'better-tailwindcss/no-unknown-classes': 'error',
             'better-tailwindcss/no-unnecessary-whitespace': 'warn',
+        },
+    },
+    {
+        files: ['src/**/*.{ts,tsx}'],
+        ignores: ['src/**/*.test.{ts,tsx}', 'src/test/**'],
+        rules: {
+            '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
+            '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+            '@typescript-eslint/no-non-null-assertion': 'error',
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector: 'ExportDefaultDeclaration',
+                    message: 'export default は使わず、名前付きエクスポートにする。',
+                },
+                {
+                    selector:
+                        "TSTypeReference[typeName.left.name='React'][typeName.right.name=/^(FC|VFC|FunctionComponent)$/]",
+                    message: 'React.FC は使わず、props に型注釈を付けた通常の関数で書く。',
+                },
+            ],
         },
     },
 ];
