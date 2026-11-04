@@ -3,6 +3,7 @@ import type { HTMLAttributes, ReactNode } from 'react';
 import type { ReservationCommand } from '../types';
 import type { SectorTerrainData } from '@/shared/terrain-types';
 import { TerrainIcon } from './TerrainIcon';
+import { resolveTargetIslandLine, resolveStackCount } from '../command-list-item-view';
 
 export type CommandListItemProps = {
     command: ReservationCommand;
@@ -39,7 +40,8 @@ export const CommandListItem = memo(function CommandListItem({
     // 2行目: 数量・パラメータ情報（表示優先のため summaryText をそのまま出す）
     const detailLine = command.summaryText?.trim() ? command.summaryText : null;
     // 3行目: 目標の島が必要な場合は別行にする
-    const targetIslandLine = command.targetIsland?.trim() ? command.targetIsland : null;
+    const targetIslandLine = resolveTargetIslandLine(command);
+    const stackCount = resolveStackCount(command);
     // 2行分の高さで固定し、3行になる場合は全体を縮小して収める
     const isThreeLines = targetIslandLine !== null;
     // 青色（高速）の下は常に隙間なし。青色・黄色とも角丸なしの四角で統一する
@@ -141,7 +143,7 @@ export const CommandListItem = memo(function CommandListItem({
                                 </span>
 
                                 {/* スタックバッジ */}
-                                {command.stackCount && command.stackCount > 1 && (
+                                {stackCount && stackCount > 1 && (
                                     <button
                                         type="button"
                                         onClick={(e) => {
@@ -150,7 +152,7 @@ export const CommandListItem = memo(function CommandListItem({
                                         }}
                                         className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/20 px-1.5 py-1 font-mono text-[10px] font-bold text-amber-300 hover:bg-amber-500/30"
                                     >
-                                        X {command.stackCount}
+                                        X {stackCount}
                                     </button>
                                 )}
                             </div>
@@ -170,7 +172,7 @@ export const CommandListItem = memo(function CommandListItem({
                                 <div
                                     data-testid={`command-target-line-${command.id}`}
                                     className="truncate text-left text-[10px] leading-tight text-white/90"
-                                    title={command.targetIsland}
+                                    title={targetIslandLine}
                                 >
                                     &lt;{targetIslandLine}&gt;
                                 </div>

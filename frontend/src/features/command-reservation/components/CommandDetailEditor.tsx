@@ -17,21 +17,12 @@ export type CommandDetailEditorProps = {
     command: ReservationCommand;
     onUpdate: (updatedCommand: ReservationCommand) => void;
     islandOptions?: IslandSearchOption[];
-    itemOptions?: IslandSearchOption[];
-    fleetOptions?: IslandSearchOption[];
 };
 
-export function CommandDetailEditor({
-    command,
-    onUpdate,
-    islandOptions = [],
-    itemOptions = [],
-    fleetOptions = [],
-}: CommandDetailEditorProps) {
+export function CommandDetailEditor({ command, onUpdate, islandOptions = [] }: CommandDetailEditorProps) {
     const definition = resolveDefinition(command);
     const params = command.params ?? {};
-    const targetIslandValue =
-        typeof params.targetIsland === 'string' ? params.targetIsland : (command.targetIsland ?? null);
+    const targetIslandValue = typeof params.targetIsland === 'string' ? params.targetIsland : null;
 
     const handleCoordSelect = (axis: 'x' | 'y', next: number) => {
         onUpdate(buildCoordUpdate(command, axis, next));
@@ -43,15 +34,13 @@ export function CommandDetailEditor({
         onUpdate(buildTargetIslandUpdate(command, islandName));
     };
 
-    const getSelectOptionsLocal = (schema: SelectParamSchema) =>
-        getSelectOptions(schema, islandOptions, itemOptions, fleetOptions);
+    const getSelectOptionsLocal = (schema: SelectParamSchema) => getSelectOptions(schema, islandOptions);
 
     const handleSliderValueChange = (schema: SliderParamSchema, nextSliderValue: number) => {
         const result = computeSliderUpdate(schema, command, nextSliderValue);
         onUpdate({
             ...command,
             summaryText: result.summaryText,
-            stackCount: result.stackCount,
             params: result.updatedParams,
         });
     };

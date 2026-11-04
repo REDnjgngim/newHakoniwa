@@ -14,8 +14,6 @@ export type CommandListProps = {
     expandedIds: Set<string>;
     focusedId: string | null;
     islandOptions?: IslandSearchOption[];
-    itemOptions?: IslandSearchOption[];
-    fleetOptions?: IslandSearchOption[];
     renderDetail?: (command: ReservationCommand) => ReactNode;
     onToggleExpand: (id: string) => void;
     onSelectCommand: (command: ReservationCommand | null) => void;
@@ -30,8 +28,6 @@ export function CommandList({
     expandedIds,
     focusedId,
     islandOptions,
-    itemOptions,
-    fleetOptions,
     onToggleExpand,
     onSelectCommand,
     onUpdateCommand,
@@ -176,8 +172,6 @@ export function CommandList({
                                 command={command}
                                 onUpdate={(updated) => onUpdateCommand(command.id, updated)}
                                 islandOptions={islandOptions}
-                                itemOptions={itemOptions}
-                                fleetOptions={fleetOptions}
                             />
                         )}
                         onToggleExpand={() => onToggleExpand(cmd.id)}

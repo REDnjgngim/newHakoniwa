@@ -4,8 +4,22 @@ import { useReservationHistory } from './use-reservation-history';
 
 function makeCommands(): ReservationCommand[] {
     return [
-        { id: 'a', commandType: 'normal', name: 'A', estimatedTurn: 1, estimatedFundsDelta: 0 },
-        { id: 'b', commandType: 'normal', name: 'B', estimatedTurn: 2, estimatedFundsDelta: 0 },
+        {
+            id: 'a',
+            commandCode: 'LEVELING',
+            commandType: 'normal',
+            name: 'A',
+            estimatedTurn: 1,
+            estimatedFundsDelta: 0,
+        },
+        {
+            id: 'b',
+            commandCode: 'LEVELING',
+            commandType: 'normal',
+            name: 'B',
+            estimatedTurn: 2,
+            estimatedFundsDelta: 0,
+        },
     ];
 }
 
@@ -35,6 +49,8 @@ describe('useReservationHistory undo/redo', () => {
         act(() => {
             result.current.undo();
         });
+        expect(result.current.canRedo).toBe(true);
+
         act(() => {
             result.current.redo();
         });

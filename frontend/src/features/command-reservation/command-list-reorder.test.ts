@@ -3,9 +3,9 @@ import type { ReservationCommand } from './types';
 import { mapReorderIndicesToIds } from './command-list-reorder';
 
 const cmds: ReservationCommand[] = [
-    { id: 'a', name: 'A', commandType: 'normal', estimatedTurn: 0, estimatedFundsDelta: 0 },
-    { id: 'b', name: 'B', commandType: 'normal', estimatedTurn: 0, estimatedFundsDelta: 0 },
-    { id: 'c', name: 'C', commandType: 'normal', estimatedTurn: 0, estimatedFundsDelta: 0 },
+    { id: 'a', commandCode: 'LEVELING', name: 'A', commandType: 'normal', estimatedTurn: 0, estimatedFundsDelta: 0 },
+    { id: 'b', commandCode: 'LEVELING', name: 'B', commandType: 'normal', estimatedTurn: 0, estimatedFundsDelta: 0 },
+    { id: 'c', commandCode: 'LEVELING', name: 'C', commandType: 'normal', estimatedTurn: 0, estimatedFundsDelta: 0 },
 ];
 
 describe('command-list-reorder', () => {

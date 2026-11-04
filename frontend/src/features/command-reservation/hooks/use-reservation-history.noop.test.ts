@@ -4,9 +4,23 @@ import { useReservationHistory } from './use-reservation-history';
 
 function makeCommands(): ReservationCommand[] {
     return [
-        { id: 'a', commandType: 'normal', name: 'A', estimatedTurn: 1, estimatedFundsDelta: 0 },
-        { id: 'b', commandType: 'normal', name: 'B', estimatedTurn: 2, estimatedFundsDelta: 0 },
-        { id: 'c', commandType: 'fast', name: 'C', estimatedTurn: 3, estimatedFundsDelta: 0 },
+        { id: 'a', commandCode: 'RECLAIM', commandType: 'normal', name: 'A', estimatedTurn: 1, estimatedFundsDelta: 0 },
+        {
+            id: 'b',
+            commandCode: 'EXPORT_FOOD',
+            commandType: 'fast',
+            name: 'B',
+            estimatedTurn: 2,
+            estimatedFundsDelta: 0,
+        },
+        {
+            id: 'c',
+            commandCode: 'MISSILE_NORMAL',
+            commandType: 'normal',
+            name: 'C',
+            estimatedTurn: 3,
+            estimatedFundsDelta: 0,
+        },
     ];
 }
 

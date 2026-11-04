@@ -1,5 +1,5 @@
 import type { ReservationCommand } from './types';
-import { getCommandDefinition, getCommandDefinitionByName } from './command-registry';
+import { getCommandDefinition } from './command-registry';
 import type {
     CommandDefinition,
     ParameterSchema,
@@ -9,11 +9,7 @@ import type {
 import type { IslandSearchOption } from './components/IslandSearchSelect';
 
 export function resolveDefinition(command: ReservationCommand): CommandDefinition | undefined {
-    if (command.commandCode) {
-        const def = getCommandDefinition(command.commandCode);
-        if (def) return def;
-    }
-    return getCommandDefinitionByName(command.name);
+    return getCommandDefinition(command.commandCode);
 }
 
 export function clampSliderValue(value: number, min: number, max: number): number {
@@ -25,19 +21,15 @@ export function toNumberParam(value: string | number | boolean | undefined, fall
     return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
-export function resolveTargetIslandValue(
-    params: ReservationCommand['params'],
-    command: ReservationCommand
-): string | null {
+export function resolveTargetIslandValue(params: ReservationCommand['params']): string | null {
     if (typeof params?.targetIsland === 'string') return params.targetIsland;
-    return command.targetIsland ?? null;
+    return null;
 }
 
 export type SliderUpdateResult = {
     updatedParams: NonNullable<ReservationCommand['params']>;
     actualValue: number;
     summaryText: string;
-    stackCount: number | undefined;
 };
 
 export function computeSliderUpdate(
@@ -53,19 +45,13 @@ export function computeSliderUpdate(
     const actualValue = safeValue * scale;
     updatedParams[schema.key] = actualValue;
     const summaryText = schema.unit ? `${schema.label}: ${actualValue}${schema.unit}` : `${schema.label}: ${safeValue}`;
-    const stackCount =
-        schema.key === 'stackCount' && command.commandCode === 'RECRUIT' ? safeValue : command.stackCount;
-    return { updatedParams, actualValue, summaryText, stackCount };
+    return { updatedParams, actualValue, summaryText };
 }
 
 export function getSelectOptions(
-    schema: SelectParamSchema,
-    islandOptions: IslandSearchOption[],
-    itemOptions: IslandSearchOption[],
-    fleetOptions: IslandSearchOption[]
+    _schema: SelectParamSchema,
+    islandOptions: IslandSearchOption[]
 ): IslandSearchOption[] {
-    if (schema.kind === 'item-select') return itemOptions;
-    if (schema.kind === 'fleet-select') return fleetOptions;
     return islandOptions;
 }
 
@@ -82,7 +68,6 @@ export function buildCoordUpdate(command: ReservationCommand, axis: 'x' | 'y', n
 export function buildTargetIslandUpdate(command: ReservationCommand, islandName: string): ReservationCommand {
     return {
         ...command,
-        targetIsland: islandName,
         params: { ...command.params, targetIsland: islandName },
     };
 }

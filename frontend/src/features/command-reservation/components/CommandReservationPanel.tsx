@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type ReactNode } from 'react';
 import type { ReservationCommand, TabType } from '../types';
 import { useGameSessionState, useGameSessionActions } from '../../game-session';
 import { BottomSheetContainer } from './BottomSheetContainer';
@@ -6,7 +6,7 @@ import { PanelTabBar } from './PanelTabBar';
 import { CommandList } from './CommandList';
 import { PanelFooter } from './PanelFooter';
 import { ToastNotification } from './ToastNotification';
-import { mockIslands, mockItems, mockFleets } from '../mocks/command-reservation';
+import { mockIslands } from '../mocks/command-reservation';
 
 export type CommandReservationPanelProps = {
     onSelectCommand?: (command: ReservationCommand | null) => void;
@@ -18,9 +18,7 @@ export type CommandReservationPanelViewProps = {
     expandedIds: Set<string>;
     focusedId: string | null;
     islandOptions?: unknown[];
-    itemOptions?: unknown[];
-    fleetOptions?: unknown[];
-    renderDetail?: (command: ReservationCommand) => React.ReactNode;
+    renderDetail?: (command: ReservationCommand) => ReactNode;
     handlers?: unknown;
 };
 
@@ -107,8 +105,6 @@ export function CommandReservationPanel({ onSelectCommand }: CommandReservationP
                         onUpdateCommand={updateCommand}
                         onDeleteCommand={deleteCommand}
                         islandOptions={mockIslands.map((i) => ({ value: i.name, label: i.name }))}
-                        itemOptions={mockItems.map((i) => ({ value: i.name, label: i.name }))}
-                        fleetOptions={mockFleets.map((i) => ({ value: i.name, label: i.name }))}
                         onReorderCommands={reorderCommandsById}
                     />
                     <PanelFooter

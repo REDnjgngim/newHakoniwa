@@ -37,32 +37,16 @@ export const mockReservationCommands: ReservationCommand[] = [
     },
     {
         id: 'cmd-03',
-        commandCode: 'MISSILE',
+        commandCode: 'MISSILE_NORMAL',
         commandType: 'normal',
         name: '通常ミサイル',
         coordinate: { x: 5, y: 6 },
         summaryText: '発射数: 28発',
-        targetIsland: 'Neptune島',
         estimatedTurn: 103,
         estimatedFundsDelta: -30,
         params: {
             missileCount: 28,
             targetIsland: 'Neptune島',
-        },
-    },
-    {
-        id: 'cmd-04',
-        commandCode: 'FLEET_MOVE',
-        commandType: 'normal',
-        name: '艦隊移動',
-        summaryText: '対象: はげはげふがふが艦隊',
-        targetIsland: '1 2 3 4 5 6 7 8 9 0...島',
-        estimatedTurn: 104,
-        estimatedFundsDelta: -10,
-        params: {
-            fleetName: 'はげはげふがふが艦隊',
-            sourceIsland: '1 2 3 4 5 6 7 8 9 0...島',
-            targetIsland: '1 2 3 4 5 6 7 8 9 0...島',
         },
     },
     {
@@ -83,39 +67,10 @@ export const mockReservationCommands: ReservationCommand[] = [
         commandCode: 'RECRUIT',
         commandType: 'normal',
         name: '誘致活動',
-        stackCount: 99,
         estimatedTurn: 106,
         estimatedFundsDelta: -50,
         params: {
             stackCount: 99,
-        },
-    },
-    {
-        id: 'cmd-07',
-        commandCode: 'ITEM_EQUIP',
-        commandType: 'fast',
-        name: 'アイテム装備',
-        coordinate: { x: 24, y: 24 },
-        summaryText: 'アイテム: 闇のスパイ道具',
-        estimatedTurn: 106, // 高速コマンドなのでターン消費なし
-        estimatedFundsDelta: 0,
-        params: {
-            itemName: '闇のスパイ道具',
-        },
-    },
-    {
-        id: 'cmd-08',
-        commandCode: 'BUILD_BATTLESHIP',
-        commandType: 'normal',
-        name: '戦艦建造',
-        coordinate: { x: 10, y: 8 },
-        summaryText: '対象: はげはげふがふが艦隊',
-        targetIsland: '1 2 3 4 5 6 7 8 9 0...島',
-        estimatedTurn: 107,
-        estimatedFundsDelta: -150,
-        params: {
-            fleetName: 'はげはげふがふが艦隊',
-            targetIsland: '1 2 3 4 5 6 7 8 9 0...島',
         },
     },
     {
@@ -154,17 +109,4 @@ export const mockReservationCommands: ReservationCommand[] = [
             exportAmount: 990000,
         },
     },
-];
-
-export const mockItems: IslandOption[] = [
-    { id: 'item-1', name: '闇のスパイ道具' },
-    { id: 'item-2', name: '死神の鎌' },
-    { id: 'item-3', name: '鉄壁の鎧' },
-];
-
-export const mockFleets: IslandOption[] = [
-    { id: 'fleet-1', name: 'はげはげふがふが艦隊' },
-    { id: 'fleet-2', name: '第2艦隊' },
-    { id: 'fleet-3', name: '第3艦隊' },
-    { id: 'fleet-4', name: '第4艦隊' },
 ];
