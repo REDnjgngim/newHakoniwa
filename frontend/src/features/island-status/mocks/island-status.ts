@@ -6,7 +6,7 @@ import type { IslandStatus } from '../types';
 // ============================================================================
 
 export const mockIslandStatus: IslandStatus = {
-    name: 'RED島',
+    name: 'Nepthune島',
     turn: 12345,
     timeToNextTurn: '0:45:12',
     rank: 1,

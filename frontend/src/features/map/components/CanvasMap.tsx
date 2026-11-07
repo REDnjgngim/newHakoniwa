@@ -16,7 +16,6 @@ import {
 } from '..';
 import type { HoverState, OnSelectTile, ResolvedMapSettings, ViewState } from '..';
 import { TerrainInfoPopup } from './TerrainInfoPopup';
-import { calculatePopupPosition } from '../engine/geometry';
 
 // ============================================================================
 // マップ本体（地形レイヤーとオーバーレイレイヤーの2枚のcanvas）。
@@ -108,7 +107,10 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
             if (cell) {
                 const terrainCell = terrain_grid[cell.y]?.[cell.x];
                 if (terrainCell) {
-                    setPopup({ coord: cell, cell: terrainCell, visible: true });
+                    setPopup({ coord: cell, cell: terrainCell, visible: false });
+                    requestAnimationFrame(() => {
+                        setPopup((prev) => (prev ? { ...prev, visible: true } : prev));
+                    });
                 }
             } else {
                 setPopup((prev) => (prev ? { ...prev, visible: false } : null));
@@ -152,9 +154,15 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
         handleResize
     );
 
+    const popupTimerRef = useRef<number | null>(null);
     const handleViewChange = useCallback(() => {
         renderAll();
-        setPopup((prev) => (prev ? { ...prev } : prev));
+        if (popupTimerRef.current !== null) {
+            window.clearTimeout(popupTimerRef.current);
+        }
+        popupTimerRef.current = window.setTimeout(() => {
+            setPopup((prev) => (prev ? { ...prev } : prev));
+        }, 100);
     }, [renderAll]);
 
     const { handlePointerDown, handlePointerMove, handlePointerUp, isDraggingRef } = usePointerPanZoom(
@@ -196,18 +204,13 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
     };
 
     const popupWidth = 480;
-    const popupHeight = 64;
     const containerSize = sizeRef.current;
     const popupPosition =
         popup !== null
-            ? calculatePopupPosition(
-                  tileToPixel(popup.coord.x, popup.coord.y, viewRef.current, baseTileSize).px,
-                  tileToPixel(popup.coord.x, popup.coord.y, viewRef.current, baseTileSize).py,
-                  popupWidth,
-                  popupHeight,
-                  containerSize.width > 0 ? containerSize.width : popupWidth + 16,
-                  containerSize.height > 0 ? containerSize.height : popupHeight + 16
-              )
+            ? {
+                  x: (containerSize.width > 0 ? containerSize.width : popupWidth + 16) / 2,
+                  y: tileToPixel(popup.coord.x, popup.coord.y, viewRef.current, baseTileSize).py + 50,
+              }
             : { x: 8, y: 8 };
 
     return (
