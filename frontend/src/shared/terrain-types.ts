@@ -5,7 +5,14 @@ export type Coordinate = {
 
 export type TileCoord = Coordinate;
 
-export type TerrainType = 'sea' | 'shallow' | 'wasteland' | 'plains' | 'mountain';
+export type TerrainType = string;
+
+export type TerrainDefinition = {
+    type: TerrainType;
+    name: string;
+    description?: string;
+    image?: string;
+};
 
 export type TerrainCell = {
     type: TerrainType;
