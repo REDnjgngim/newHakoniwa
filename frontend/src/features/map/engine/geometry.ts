@@ -132,3 +132,32 @@ export function clampPanOffset(
         scale,
     };
 }
+
+export const POPUP_OFFSET_X = 70;
+export const POPUP_OFFSET_Y = 50;
+
+export function calculatePopupPosition(
+    tilePx: number,
+    tilePy: number,
+    popupWidth: number,
+    popupHeight: number,
+    containerWidth: number,
+    containerHeight: number,
+    offsetX = POPUP_OFFSET_X,
+    offsetY = POPUP_OFFSET_Y
+): { x: number; y: number } {
+    let x = tilePx + offsetX;
+    let y = tilePy + offsetY;
+
+    if (x + popupWidth > containerWidth - 8) {
+        x = Math.max(8, containerWidth - popupWidth - 8);
+    }
+    if (y + popupHeight > containerHeight - 8) {
+        y = Math.max(8, containerHeight - popupHeight - 8);
+    }
+
+    return {
+        x: Math.max(8, x),
+        y: Math.max(8, y),
+    };
+}

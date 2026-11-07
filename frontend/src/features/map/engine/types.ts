@@ -143,6 +143,7 @@ export type HexMapPreviewProps = {
     settings?: MapSettingsInput;
     terrainImages?: TerrainImageMap;
     onSelect?: OnSelectTile;
+    islandName?: string;
 };
 
 // ============================================================================
@@ -175,6 +176,12 @@ export type ResolvedMapSettings = {
 
 // ホバー対象のセル座標（マス座標の別名）
 export type HoverCell = TileCoord;
+
+// ポップアップ配置用の位置情報
+export type PopupPosition = {
+    x: number;
+    y: number;
+};
 
 // ホバー中の状態。未ホバー時は x / y に null が入る
 export type HoverState = {

@@ -1,9 +1,11 @@
-import { useCallback, useRef, type PointerEvent } from 'react';
+import { useCallback, useRef, useState, type PointerEvent } from 'react';
 import type { SectorTerrainData } from '@/shared/terrain-types';
+import type { TerrainCell } from '@/shared/terrain-types';
 import {
     clampPanOffset,
     pixelToTile,
     setupCanvasForDpr,
+    tileToPixel,
     useElementSize,
     useHoverTracking,
     useMapAnimations,
@@ -13,6 +15,8 @@ import {
     useWheelZoom,
 } from '..';
 import type { HoverState, OnSelectTile, ResolvedMapSettings, ViewState } from '..';
+import { TerrainInfoPopup } from './TerrainInfoPopup';
+import { calculatePopupPosition } from '../engine/geometry';
 
 // ============================================================================
 // マップ本体（地形レイヤーとオーバーレイレイヤーの2枚のcanvas）。
@@ -23,9 +27,10 @@ export type CanvasMapProps = {
     sector: SectorTerrainData;
     settings: ResolvedMapSettings;
     onSelect?: OnSelectTile;
+    islandName?: string;
 };
 
-export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
+export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -33,6 +38,9 @@ export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
     const selectedTileRef = useRef<{ x: number; y: number } | null>(null);
     const hoverStateRef = useRef<HoverState>({ x: null, y: null });
     const hoverFadeStartRef = useRef<number>(0); // ホバー位置が変わった時刻(ms)。ここからフェードアウトを始める
+    const [popup, setPopup] = useState<{ coord: { x: number; y: number }; cell: TerrainCell; visible: boolean } | null>(
+        null
+    );
     const cursorAnimStartRef = useRef<number>(0); // カーソルアニメーション開始時刻(ms)。パルスの位相計算に使う
 
     const { map_width, map_height, terrain_grid } = sector;
@@ -95,7 +103,18 @@ export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         hoverStateRef,
         containerRef,
         resolveHoverCell,
-        handleHoverChange
+        handleHoverChange,
+        (cell) => {
+            if (cell) {
+                const terrainCell = terrain_grid[cell.y]?.[cell.x];
+                if (terrainCell) {
+                    setPopup({ coord: cell, cell: terrainCell, visible: true });
+                }
+            } else {
+                setPopup((prev) => (prev ? { ...prev, visible: false } : null));
+                window.setTimeout(() => setPopup(null), 150);
+            }
+        }
     );
 
     // Canvasサイズをコンテナに追従させ、初回のみ中央揃えを実行
@@ -133,10 +152,15 @@ export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         handleResize
     );
 
+    const handleViewChange = useCallback(() => {
+        renderAll();
+        setPopup((prev) => (prev ? { ...prev } : prev));
+    }, [renderAll]);
+
     const { handlePointerDown, handlePointerMove, handlePointerUp, isDraggingRef } = usePointerPanZoom(
         containerRef,
         viewRef,
-        renderAll,
+        handleViewChange,
         {
             dragThresholdPx: settings.view.dragThresholdPx,
             minScale: settings.view.minScale,
@@ -149,7 +173,7 @@ export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         }
     );
 
-    useWheelZoom(containerRef, viewRef, renderAll, {
+    useWheelZoom(containerRef, viewRef, handleViewChange, {
         wheelZoomFactor: settings.view.wheelZoomFactor,
         minScale: settings.view.minScale,
         maxScale: settings.view.maxScale,
@@ -170,6 +194,21 @@ export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         // マウス・ペンはホバー中のマスをクリックで即確定、タッチは同一マスへの2回目のタップで確定する
         handleTapForHover(e, handleTileConfirm);
     };
+
+    const popupWidth = 480;
+    const popupHeight = 64;
+    const containerSize = sizeRef.current;
+    const popupPosition =
+        popup !== null
+            ? calculatePopupPosition(
+                  tileToPixel(popup.coord.x, popup.coord.y, viewRef.current, baseTileSize).px,
+                  tileToPixel(popup.coord.x, popup.coord.y, viewRef.current, baseTileSize).py,
+                  popupWidth,
+                  popupHeight,
+                  containerSize.width > 0 ? containerSize.width : popupWidth + 16,
+                  containerSize.height > 0 ? containerSize.height : popupHeight + 16
+              )
+            : { x: 8, y: 8 };
 
     return (
         <div className="relative size-full min-h-0">
@@ -200,6 +239,15 @@ export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
                     ref={overlayCanvasRef}
                     style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
                 />
+                {popup !== null && (
+                    <TerrainInfoPopup
+                        coord={popup.coord}
+                        cell={popup.cell}
+                        islandName={islandName}
+                        position={popupPosition}
+                        visible={popup.visible}
+                    />
+                )}
             </div>
         </div>
     );

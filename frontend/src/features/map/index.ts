@@ -26,6 +26,7 @@ export type {
     PinchState,
     PointerLocalPosition,
     PointerPanZoomResult,
+    PopupPosition,
     ResolvedMapSettings,
     TerrainImageMap,
     TileRange,
@@ -46,12 +47,15 @@ export {
 
 // 幾何・Canvas
 export {
+    calculatePopupPosition,
     clamp,
     clampPanOffset,
     distance,
     getVisibleLabelRange,
     getVisibleRange,
     pixelToTile,
+    POPUP_OFFSET_X,
+    POPUP_OFFSET_Y,
     tileToPixel,
     zoomAroundPoint,
 } from './engine/geometry';
@@ -72,6 +76,8 @@ export { drawCornerCursor, getPulseScale } from './render/corner-cursor';
 export { CanvasMap } from './components/CanvasMap';
 export type { CanvasMapProps } from './components/CanvasMap';
 export { HexMapPreview } from './components/HexMapPreview';
+export { TerrainInfoPopup } from './components/TerrainInfoPopup';
+export type { TerrainInfoPopupProps } from './components/TerrainInfoPopup';
 
 export { getPointerLocalPosition, useHoverTracking } from './hooks/use-hover-tracking';
 export { usePointerPanZoom } from './hooks/use-pointer-pan-zoom';

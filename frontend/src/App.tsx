@@ -28,6 +28,7 @@ export function App() {
                         <HexMapPreview
                             sector={sectorTerrain}
                             onSelect={(selection: MapSelection) => selectTile(selection.coord)}
+                            islandName={islandStatus.name}
                         />
                     </div>
                 </Inspector>
