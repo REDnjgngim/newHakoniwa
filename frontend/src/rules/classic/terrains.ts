@@ -26,7 +26,7 @@ export const CLASSIC_TERRAINS: readonly TerrainDefinition[] = [
     },
     {
         type: 'plains',
-        name: '平野',
+        name: '平地',
         image: TERRAIN_IMAGE_MAP.plains,
         description: '平坦な土地。農場や建物を建設できます。',
     },
