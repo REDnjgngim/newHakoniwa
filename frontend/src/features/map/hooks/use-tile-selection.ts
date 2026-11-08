@@ -14,14 +14,16 @@ export type TileSelectionParams = {
     cursorLoop: AnimationLoopController;
     terrain_grid: SectorTerrainData['terrain_grid'];
     onSelect?: OnSelectTile;
+    renderOverlay?: () => void;
 };
 
 export type TileSelectionResult = {
     handleTileConfirm: (tile: TileCoord) => void;
+    clearSelection: () => void;
 };
 
 export function useTileSelection(params: TileSelectionParams): TileSelectionResult {
-    const { selectedTileRef, cursorAnimStartRef, cursorLoop, terrain_grid, onSelect } = params;
+    const { selectedTileRef, cursorAnimStartRef, cursorLoop, terrain_grid, onSelect, renderOverlay } = params;
 
     const handleTileConfirm = useCallback(
         (tile: TileCoord) => {
@@ -37,5 +39,13 @@ export function useTileSelection(params: TileSelectionParams): TileSelectionResu
         [selectedTileRef, cursorAnimStartRef, cursorLoop, terrain_grid, onSelect]
     );
 
-    return { handleTileConfirm };
+    const clearSelection = useCallback(() => {
+        if (!selectedTileRef.current) return;
+        selectedTileRef.current = null;
+        cursorLoop.stop();
+        renderOverlay?.();
+        onSelect?.(null);
+    }, [selectedTileRef, cursorLoop, renderOverlay, onSelect]);
+
+    return { handleTileConfirm, clearSelection };
 }

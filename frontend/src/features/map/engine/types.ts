@@ -132,7 +132,7 @@ export type MapSelection = {
     cell: TerrainCell;
 };
 
-export type OnSelectTile = (selection: MapSelection) => void;
+export type OnSelectTile = (selection: MapSelection | null) => void;
 
 // 地形画像マップ（呼び出し側が注入する。全キー必須ではない）
 export type TerrainImageMap = Partial<Record<TerrainType, string>>;
@@ -208,8 +208,12 @@ export type HoverTrackingResult<E extends HTMLElement> = {
     handlePointerMoveForHover: (event: ReactPointerEvent<E>) => void;
     // pointerleave 用: ホバーを解除する（タッチでは解除しない）
     handlePointerLeaveForHover: (event?: ReactPointerEvent<E>) => void;
-    // pointerup 用: ホバー中と同一セルなら onConfirm、別セルならホバー移動のみ
-    handleTapForHover: (event: ReactPointerEvent<E>, onConfirm: (cell: HoverCell) => void) => void;
+    // pointerup 用: ホバー中と同一セルなら onConfirm、別セルならホバー移動のみ。onTap はセル判定直後に通知
+    handleTapForHover: (
+        event: ReactPointerEvent<E>,
+        onConfirm: (cell: HoverCell) => void,
+        onTap?: (cell: HoverCell | null) => void
+    ) => void;
 };
 
 export type PointerPanZoomResult<E extends HTMLElement> = {

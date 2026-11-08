@@ -1,6 +1,5 @@
 import { HeaderStatusBar } from './features/island-status';
 import { HexMapPreview } from './features/map';
-import type { MapSelection } from './features/map';
 import { Inspector, InspectorFrame } from './shared';
 import { CommandReservationPanel } from './features/command-reservation';
 import { useGameSession } from './features/game-session';
@@ -27,7 +26,7 @@ export function App() {
                         </div>
                         <HexMapPreview
                             sector={sectorTerrain}
-                            onSelect={(selection: MapSelection) => selectTile(selection.coord)}
+                            onSelect={(selection) => selectTile(selection ? selection.coord : null)}
                             islandName={islandStatus.name}
                         />
                     </div>

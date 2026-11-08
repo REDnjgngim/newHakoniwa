@@ -82,12 +82,13 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
         renderOverlay,
     });
 
-    const { handleTileConfirm } = useTileSelection({
+    const { handleTileConfirm, clearSelection } = useTileSelection({
         selectedTileRef,
         cursorAnimStartRef,
         cursorLoop,
         terrain_grid,
         onSelect,
+        renderOverlay,
     });
 
     // ポインター位置→マス座標の変換（viewはref経由で常に最新の表示状態を参照する）
@@ -200,7 +201,16 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
         if (wasDragging) return;
 
         // マウス・ペンはホバー中のマスをクリックで即確定、タッチは同一マスへの2回目のタップで確定する
-        handleTapForHover(e, handleTileConfirm);
+        handleTapForHover(e, handleTileConfirm, (cell) => {
+            const selected = selectedTileRef.current;
+            if (selected) {
+                // カーソル表示中に他の箇所（別マスやマップ外）がタップされたら選択を解除する
+                const isOther = !cell || cell.x !== selected.x || cell.y !== selected.y;
+                if (isOther) {
+                    clearSelection();
+                }
+            }
+        });
     };
 
     const popupWidth = 480;

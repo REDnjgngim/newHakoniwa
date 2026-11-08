@@ -17,4 +17,63 @@ describe('useTileSelection', () => {
         result.current.handleTileConfirm({ x: 0, y: 0 });
         expect(onSelect).toHaveBeenCalled();
     });
+
+    it('clearSelection が selectedTileRef を null にし、cursorLoop.stop と renderOverlay と onSelect(null) を呼ぶ', () => {
+        const selectedTileRef: { current: TileCoord | null } = { current: { x: 1, y: 1 } };
+        const cursorAnimStartRef = { current: 0 };
+        const cursorLoop: AnimationLoopController = {
+            start: vi.fn(),
+            stop: vi.fn(),
+            isRunning: () => false,
+        };
+        const terrain_grid: SectorTerrainData['terrain_grid'] = [[{ type: 'sea' }]];
+        const onSelect = vi.fn();
+        const renderOverlay = vi.fn();
+        const { result } = renderHook(() =>
+            useTileSelection({
+                selectedTileRef,
+                cursorAnimStartRef,
+                cursorLoop,
+                terrain_grid,
+                onSelect,
+                renderOverlay,
+            })
+        );
+
+        result.current.clearSelection();
+
+        expect(selectedTileRef.current).toBeNull();
+        expect(cursorLoop.stop).toHaveBeenCalled();
+        expect(renderOverlay).toHaveBeenCalled();
+        expect(onSelect).toHaveBeenCalledWith(null);
+    });
+
+    it('selectedTileRef が既に null の場合 clearSelection は何もしない', () => {
+        const selectedTileRef: { current: TileCoord | null } = { current: null };
+        const cursorAnimStartRef = { current: 0 };
+        const cursorLoop: AnimationLoopController = {
+            start: vi.fn(),
+            stop: vi.fn(),
+            isRunning: () => false,
+        };
+        const terrain_grid: SectorTerrainData['terrain_grid'] = [[{ type: 'sea' }]];
+        const onSelect = vi.fn();
+        const renderOverlay = vi.fn();
+        const { result } = renderHook(() =>
+            useTileSelection({
+                selectedTileRef,
+                cursorAnimStartRef,
+                cursorLoop,
+                terrain_grid,
+                onSelect,
+                renderOverlay,
+            })
+        );
+
+        result.current.clearSelection();
+
+        expect(cursorLoop.stop).not.toHaveBeenCalled();
+        expect(renderOverlay).not.toHaveBeenCalled();
+        expect(onSelect).not.toHaveBeenCalled();
+    });
 });

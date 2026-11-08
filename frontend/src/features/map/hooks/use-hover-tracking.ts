@@ -90,8 +90,14 @@ export function useHoverTracking<E extends HTMLElement>(
     );
 
     const handleTapForHover = useCallback(
-        (event: ReactPointerEvent<E>, onConfirm: (cell: HoverCell) => void) => {
+        (
+            event: ReactPointerEvent<E>,
+            onConfirm: (cell: HoverCell) => void,
+            onTap?: (cell: HoverCell | null) => void
+        ) => {
             const cell = resolveEventCell(event);
+            onTap?.(cell);
+
             if (!cell) {
                 // マップ外のタップ/クリックはホバー解除
                 setHover({ x: null, y: null });
