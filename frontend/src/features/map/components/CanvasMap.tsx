@@ -1,4 +1,4 @@
-import { useCallback, useRef, type PointerEvent } from 'react';
+import { useCallback, useRef, useState, type PointerEvent } from 'react';
 import type { SectorTerrainData } from '@/shared/terrain-types';
 import {
     clampPanOffset,
@@ -16,6 +16,8 @@ import type { HoverState, OnSelectTile, ResolvedMapSettings, ViewState } from '.
 import { TerrainInfoPopup } from './TerrainInfoPopup';
 import { usePopupState } from '../hooks/use-popup-state';
 import { getClassicTerrain } from '@/rules/classic';
+import { CommandInputPopup } from '@/features/command-input-popup';
+import { useGameSessionActions } from '@/features/game-session';
 
 // ============================================================================
 // マップ本体（地形レイヤーとオーバーレイレイヤーの2枚のcanvas）。
@@ -50,6 +52,18 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
         baseTileSize,
         containerSizeRef: sizeRef,
     });
+
+    const [isCommandOpen, setIsCommandOpen] = useState<boolean>(false);
+
+    const { addCommand } = useGameSessionActions();
+
+    const handleCellHovered = useCallback(
+        (cell: import('../engine/types').HoverCell | null) => {
+            onCellHovered(cell);
+            setIsCommandOpen(false);
+        },
+        [onCellHovered]
+    );
 
     // 初期スケールでマップ中央がcanvas中央に来るようoffsetを設定
     const initView = useCallback(
@@ -108,7 +122,7 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
         containerRef,
         resolveHoverCell,
         handleHoverChange,
-        onCellHovered
+        handleCellHovered
     );
 
     // Canvasサイズをコンテナに追従させ、初回のみ中央揃えを実行
@@ -231,14 +245,40 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
                     (() => {
                         const terrain = getClassicTerrain(popup.cell.type);
                         return (
-                            <TerrainInfoPopup
-                                coord={popup.coord}
-                                terrainName={terrain?.name ?? popup.cell.type}
-                                terrainImage={terrain?.image}
-                                islandName={islandName}
-                                position={popupPosition}
-                                visible={popup.visible}
-                            />
+                            <>
+                                <TerrainInfoPopup
+                                    coord={popup.coord}
+                                    terrainName={terrain?.name ?? popup.cell.type}
+                                    terrainImage={terrain?.image}
+                                    islandName={islandName}
+                                    position={popupPosition}
+                                    visible={popup.visible}
+                                    isCommandOpen={isCommandOpen}
+                                    onToggleCommandPanel={() => setIsCommandOpen((v) => !v)}
+                                />
+                                {isCommandOpen && (
+                                    <CommandInputPopup
+                                        coord={popup.coord}
+                                        cell={popup.cell}
+                                        position={popupPosition}
+                                        terrainPopupHeightPx={52}
+                                        visible={popup.visible}
+                                        onClose={() => setIsCommandOpen(false)}
+                                        onSelectCommand={(def, quantity) => {
+                                            addCommand({
+                                                id: crypto.randomUUID(),
+                                                commandCode: def.commandCode,
+                                                commandType: def.commandType,
+                                                name: def.name,
+                                                coordinate: def.hasCoordinate ? popup.coord : undefined,
+                                                estimatedTurn: def.estimatedTurn,
+                                                estimatedFundsDelta: def.estimatedFundsDelta,
+                                                params: quantity > 1 ? { stackCount: quantity } : undefined,
+                                            });
+                                        }}
+                                    />
+                                )}
+                            </>
                         );
                     })()}
             </div>

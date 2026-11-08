@@ -9,6 +9,8 @@ export function TerrainInfoPopup({
     islandName,
     position,
     visible,
+    isCommandOpen,
+    onToggleCommandPanel,
 }: TerrainInfoPopupProps) {
     return (
         <div
@@ -40,7 +42,13 @@ export function TerrainInfoPopup({
                 </div>
 
                 {/* 右側: コマンド開閉ボタン */}
-                <div className="flex h-11 w-20 shrink-0 items-center justify-center" />
+                <button
+                    type="button"
+                    onClick={onToggleCommandPanel}
+                    className="pointer-events-auto flex h-11 w-20 shrink-0 cursor-pointer items-center justify-center rounded-xs border border-cyan-400/30 bg-cyan-900/40 text-xs font-medium text-cyan-300 transition-colors select-none hover:bg-cyan-800/50"
+                >
+                    {isCommandOpen ? '▲ 閉じる' : '▼ コマンド'}
+                </button>
             </div>
         </div>
     );

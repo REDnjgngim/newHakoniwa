@@ -192,6 +192,10 @@ export type TerrainInfoPopupProps = {
     islandName?: string;
     position: PopupPosition;
     visible: boolean;
+    /** コマンドパネルが現在開いているか */
+    isCommandOpen: boolean;
+    /** [▼コマンド] / [▲ 閉じる] ボタン押下時のコールバック */
+    onToggleCommandPanel: () => void;
 };
 
 // ポップアップ配置用の位置情報
