@@ -1,18 +1,15 @@
-import { getClassicTerrain } from '@/rules/classic';
-import type { Coordinate, TerrainCell } from '@/shared/terrain-types';
+import type { TerrainInfoPopupProps } from '../engine/types';
 
-export type TerrainInfoPopupProps = {
-    coord: Coordinate;
-    cell: TerrainCell;
-    islandName?: string;
-    position: { x: number; y: number };
-    visible: boolean;
-};
+export type { TerrainInfoPopupProps } from '../engine/types';
 
-export function TerrainInfoPopup({ coord, cell, islandName, position, visible }: TerrainInfoPopupProps) {
-    const terrain = getClassicTerrain(cell.type);
-    const terrainName = terrain?.name ?? cell.type;
-
+export function TerrainInfoPopup({
+    coord,
+    terrainName,
+    terrainImage,
+    islandName,
+    position,
+    visible,
+}: TerrainInfoPopupProps) {
     return (
         <div
             style={{ left: `${position.x}px`, top: `${position.y}px`, transform: 'translateX(-50%)' }}
@@ -23,9 +20,9 @@ export function TerrainInfoPopup({ coord, cell, islandName, position, visible }:
             <div className="flex items-center justify-start gap-1">
                 {/* 左側: 地形アイコン */}
                 <div className="flex size-11 shrink-0 items-center justify-center rounded-xs bg-[rgba(0,0,0,0.3)]">
-                    {terrain?.image ? (
+                    {terrainImage ? (
                         <img
-                            src={terrain.image}
+                            src={terrainImage}
                             alt={terrainName}
                             className="size-9 object-contain [image-rendering:pixelated]"
                         />

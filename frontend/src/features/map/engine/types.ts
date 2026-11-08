@@ -177,6 +177,23 @@ export type ResolvedMapSettings = {
 // ホバー対象のセル座標（マス座標の別名）
 export type HoverCell = TileCoord;
 
+// ポップアップ内部状態
+export type PopupState = {
+    coord: TileCoord;
+    cell: TerrainCell;
+    visible: boolean;
+};
+
+// 地形情報ポップアップのProps
+export type TerrainInfoPopupProps = {
+    coord: TileCoord;
+    terrainName: string;
+    terrainImage?: string;
+    islandName?: string;
+    position: PopupPosition;
+    visible: boolean;
+};
+
 // ポップアップ配置用の位置情報
 export type PopupPosition = {
     x: number;
@@ -235,4 +252,19 @@ export type AnimationLoopController = {
     start: () => void;
     stop: () => void;
     isRunning: () => boolean;
+};
+export type UsePopupStateParams = {
+    terrain_grid: SectorTerrainData['terrain_grid'];
+    viewRef: RefObject<ViewState>;
+    baseTileSize: number;
+    containerSizeRef: RefObject<{ width: number; height: number }>;
+    fadeOutDelayMs?: number;
+    viewChangeDebounceMs?: number;
+};
+
+export type UsePopupStateResult = {
+    popup: PopupState | null;
+    popupPosition: PopupPosition;
+    onCellHovered: (cell: HoverCell | null) => void;
+    onViewChange: () => void;
 };

@@ -27,9 +27,12 @@ export type {
     PointerLocalPosition,
     PointerPanZoomResult,
     PopupPosition,
+    PopupState,
     ResolvedMapSettings,
     TerrainImageMap,
     TileRange,
+    UsePopupStateParams,
+    UsePopupStateResult,
     ViewState,
 } from './engine/types';
 // shared 由来の地形・座標型（中継削除後の直接公開）
@@ -88,6 +91,7 @@ export { useTerrainImages } from './hooks/use-terrain-images';
 export { useMapRenderer } from './hooks/use-map-renderer';
 export { useMapAnimations } from './hooks/use-map-animations';
 export { useTileSelection } from './hooks/use-tile-selection';
+export { usePopupState } from './hooks/use-popup-state';
 export type { PointerPanZoomSettings } from './hooks/use-pointer-pan-zoom';
 export type { WheelZoomSettings } from './hooks/use-wheel-zoom';
 export type { ElementSize, ElementSizeLimits } from './hooks/use-element-size';
