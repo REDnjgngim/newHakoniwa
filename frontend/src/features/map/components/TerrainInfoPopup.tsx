@@ -1,3 +1,8 @@
+import { useCommandInput } from '@/features/command-input-popup/hooks/use-command-input';
+import { CommandInputHeader } from '@/features/command-input-popup/components/CommandInputHeader';
+import { CommandInputGrid } from '@/features/command-input-popup/components/CommandInputGrid';
+import type { CommandDefinition } from '@/features/command-reservation/command-definition-types';
+
 import type { TerrainInfoPopupProps } from '../engine/types';
 
 export type { TerrainInfoPopupProps } from '../engine/types';
@@ -11,11 +16,22 @@ export function TerrainInfoPopup({
     visible,
     isCommandOpen,
     onToggleCommandPanel,
+    onSelectCommand,
 }: TerrainInfoPopupProps) {
+    const { activeMode, setActiveMode, quantity, setQuantity, visibleCommands } = useCommandInput();
+
+    const handleSelect = (def: CommandDefinition) => {
+        onSelectCommand?.(def, quantity);
+    };
+
     return (
         <div
-            style={{ left: `${position.x}px`, top: `${position.y}px`, transform: 'translateX(-50%)' }}
-            className={`pointer-events-none absolute z-30 w-4/5 max-w-60 rounded-xs border border-cyan-400/50 bg-[rgba(10,25,45,0.75)] p-1 text-left shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all duration-150 ease-out md:w-1/3 md:max-w-none ${
+            style={{
+                left: `${position.x}px`,
+                top: `${position.y}px`,
+                transform: 'translateX(-50%)',
+            }}
+            className={`pointer-events-none absolute z-40 max-h-[85vh] w-4/5 max-w-120 overflow-y-auto rounded-xs border border-cyan-400/50 bg-[rgba(10,25,45,0.75)] p-1 text-left shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all duration-150 ease-out md:w-1/3 md:max-w-none ${
                 visible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
             }`}
         >
@@ -50,6 +66,18 @@ export function TerrainInfoPopup({
                     {isCommandOpen ? '▲ 閉じる' : '▼ コマンド'}
                 </button>
             </div>
+
+            {isCommandOpen && (
+                <div className="pointer-events-auto mt-1 border-t border-cyan-400/30 pt-1">
+                    <CommandInputHeader
+                        activeMode={activeMode}
+                        onChangeMode={setActiveMode}
+                        quantity={quantity}
+                        onChangeQuantity={setQuantity}
+                    />
+                    <CommandInputGrid commands={visibleCommands} quantity={quantity} onSelectCommand={handleSelect} />
+                </div>
+            )}
         </div>
     );
 }

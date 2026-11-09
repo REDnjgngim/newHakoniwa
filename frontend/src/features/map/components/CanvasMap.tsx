@@ -16,7 +16,6 @@ import type { HoverState, OnSelectTile, ResolvedMapSettings, ViewState } from '.
 import { TerrainInfoPopup } from './TerrainInfoPopup';
 import { usePopupState } from '../hooks/use-popup-state';
 import { getClassicTerrain } from '@/rules/classic';
-import { CommandInputPopup } from '@/features/command-input-popup';
 import { useGameSessionActions } from '@/features/game-session';
 
 // ============================================================================
@@ -46,7 +45,12 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
 
     const viewRef = useRef<ViewState>({ offsetX: 0, offsetY: 0, scale: initialScale });
 
-    const { popup, popupPosition, onCellHovered, onViewChange } = usePopupState({
+    const {
+        popup,
+        popupPosition,
+        onCellHovered: onCellHoveredRaw,
+        onViewChange,
+    } = usePopupState({
         terrain_grid,
         viewRef,
         baseTileSize,
@@ -54,18 +58,35 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
     });
 
     const [isCommandOpen, setIsCommandOpen] = useState<boolean>(false);
+    const [isTileSelected, setIsTileSelected] = useState<boolean>(false);
 
     const { addCommand } = useGameSessionActions();
 
     const handleCellHovered = useCallback(
         (cell: import('../engine/types').HoverCell | null) => {
-            onCellHovered(cell);
-            setIsCommandOpen(false);
+            // コマンドポップアップ表示中はホバーによる情報ポップアップ更新を抑止
+            if (isCommandOpen) return;
+            setIsTileSelected(false);
+            onCellHoveredRaw(cell);
         },
-        [onCellHovered]
+        [isCommandOpen, onCellHoveredRaw]
     );
 
-    // 初期スケールでマップ中央がcanvas中央に来るようoffsetを設定
+    const handleSelectTile = useCallback(
+        (selection: Parameters<OnSelectTile>[0] | null) => {
+            if (selection) {
+                onCellHoveredRaw({ x: selection.coord.x, y: selection.coord.y });
+                setIsCommandOpen(true);
+                setIsTileSelected(true);
+            } else {
+                onCellHoveredRaw(null);
+                setIsCommandOpen(false);
+                setIsTileSelected(false);
+            }
+            onSelect?.(selection);
+        },
+        [onCellHoveredRaw, onSelect]
+    );
     const initView = useCallback(
         (canvasW: number, canvasH: number) => {
             const centerMapX = (map_width / 2) * baseTileSize + baseTileSize * 0.5;
@@ -105,7 +126,7 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
         cursorAnimStartRef,
         cursorLoop,
         terrain_grid,
-        onSelect,
+        onSelect: handleSelectTile,
         renderOverlay,
     });
 
@@ -212,6 +233,11 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
         });
     };
 
+    const effectivePopupPosition =
+        isTileSelected && popup !== null
+            ? { x: (sizeRef.current.width || 0) / 2, y: (sizeRef.current.height || 0) * 0.5 }
+            : popupPosition;
+
     return (
         <div className="relative size-full min-h-0">
             <div
@@ -245,40 +271,28 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
                     (() => {
                         const terrain = getClassicTerrain(popup.cell.type);
                         return (
-                            <>
-                                <TerrainInfoPopup
-                                    coord={popup.coord}
-                                    terrainName={terrain?.name ?? popup.cell.type}
-                                    terrainImage={terrain?.image}
-                                    islandName={islandName}
-                                    position={popupPosition}
-                                    visible={popup.visible}
-                                    isCommandOpen={isCommandOpen}
-                                    onToggleCommandPanel={() => setIsCommandOpen((v) => !v)}
-                                />
-                                {isCommandOpen && (
-                                    <CommandInputPopup
-                                        coord={popup.coord}
-                                        cell={popup.cell}
-                                        position={popupPosition}
-                                        terrainPopupHeightPx={52}
-                                        visible={popup.visible}
-                                        onClose={() => setIsCommandOpen(false)}
-                                        onSelectCommand={(def, quantity) => {
-                                            addCommand({
-                                                id: crypto.randomUUID(),
-                                                commandCode: def.commandCode,
-                                                commandType: def.commandType,
-                                                name: def.name,
-                                                coordinate: def.hasCoordinate ? popup.coord : undefined,
-                                                estimatedTurn: def.estimatedTurn,
-                                                estimatedFundsDelta: def.estimatedFundsDelta,
-                                                params: quantity > 1 ? { stackCount: quantity } : undefined,
-                                            });
-                                        }}
-                                    />
-                                )}
-                            </>
+                            <TerrainInfoPopup
+                                coord={popup.coord}
+                                terrainName={terrain?.name ?? popup.cell.type}
+                                terrainImage={terrain?.image}
+                                islandName={islandName}
+                                position={effectivePopupPosition}
+                                visible={popup.visible}
+                                isCommandOpen={isCommandOpen}
+                                onToggleCommandPanel={() => setIsCommandOpen((v) => !v)}
+                                onSelectCommand={(def, quantity) => {
+                                    addCommand({
+                                        id: crypto.randomUUID(),
+                                        commandCode: def.commandCode,
+                                        commandType: def.commandType,
+                                        name: def.name,
+                                        coordinate: def.hasCoordinate ? popup.coord : undefined,
+                                        estimatedTurn: def.estimatedTurn,
+                                        estimatedFundsDelta: def.estimatedFundsDelta,
+                                        params: quantity > 1 ? { stackCount: quantity } : undefined,
+                                    });
+                                }}
+                            />
                         );
                     })()}
             </div>

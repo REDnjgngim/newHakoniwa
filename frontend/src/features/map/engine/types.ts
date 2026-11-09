@@ -1,5 +1,6 @@
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
 import type { SectorTerrainData, TerrainCell, TerrainType, TileCoord } from '@/shared/terrain-types';
+import type { CommandDefinition } from '@/features/command-reservation/command-definition-types';
 
 // マップ表示・描画設定の型定義
 export type MapRenderOptions = {
@@ -196,6 +197,8 @@ export type TerrainInfoPopupProps = {
     isCommandOpen: boolean;
     /** [▼コマンド] / [▲ 閉じる] ボタン押下時のコールバック */
     onToggleCommandPanel: () => void;
+    onSelectCommand?: (def: CommandDefinition, quantity: number) => void;
+    centered?: boolean;
 };
 
 // ポップアップ配置用の位置情報

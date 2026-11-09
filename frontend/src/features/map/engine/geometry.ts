@@ -149,8 +149,13 @@ export function calculatePopupPosition(
     let x = tilePx + offsetX;
     let y = tilePy + offsetY;
 
-    if (x + popupWidth > containerWidth - 8) {
-        x = Math.max(8, containerWidth - popupWidth - 8);
+    // x はポップアップ中心座標として扱う
+    const halfWidth = popupWidth / 2;
+    if (x + halfWidth > containerWidth - 8) {
+        x = Math.max(halfWidth + 8, containerWidth - halfWidth - 8);
+    }
+    if (x - halfWidth < 8) {
+        x = halfWidth + 8;
     }
     if (y + popupHeight > containerHeight - 8) {
         y = Math.max(8, containerHeight - popupHeight - 8);

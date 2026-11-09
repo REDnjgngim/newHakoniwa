@@ -80,12 +80,13 @@ export function usePopupState({
                   const containerSize = containerSizeRef.current;
                   const { px, py } = tileToPixel(popup.coord.x, popup.coord.y, viewRef.current, baseTileSize);
                   const containerWidth = containerSize.width > 0 ? containerSize.width : 480 + 16;
+                  const popupWidth = Math.min(480, containerWidth * 0.8);
                   const containerHeight = containerSize.height > 0 ? containerSize.height : 0;
                   // popup height unknown; pass a reasonable default (60) for clamping
                   return calculatePopupPosition(
                       px,
                       py,
-                      480,
+                      popupWidth,
                       60,
                       containerWidth,
                       containerHeight > 0 ? containerHeight : 9999

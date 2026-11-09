@@ -9,7 +9,7 @@ export type CommandInputHeaderProps = {
 
 export function CommandInputHeader({ activeMode, onChangeMode, quantity, onChangeQuantity }: CommandInputHeaderProps) {
     return (
-        <div className="flex flex-col gap-1 p-2">
+        <div className="flex flex-col gap-1 p-1">
             <div className="flex items-center justify-between gap-2">
                 <div className="flex gap-1">
                     <button
@@ -66,7 +66,7 @@ export function CommandInputHeader({ activeMode, onChangeMode, quantity, onChang
                     </button>
                 </div>
             </div>
-            <div className="text-[10px] text-slate-400">タップしてコマンドを予約</div>
+            <div className="text-center text-[10px] text-slate-400">タップしてコマンドを予約</div>
         </div>
     );
 }
