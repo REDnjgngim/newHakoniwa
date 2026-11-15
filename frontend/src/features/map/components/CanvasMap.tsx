@@ -1,5 +1,5 @@
 import { useCallback, useRef, type PointerEvent } from 'react';
-import type { SectorTerrainData } from '@/shared/terrain-types';
+import { resolveTerrainDisplay, type SectorTerrainData, type TerrainResolver, type TileCoord } from '@/shared';
 import {
     clampPanOffset,
     pixelToTile,
@@ -12,7 +12,9 @@ import {
     useTileSelection,
     useWheelZoom,
 } from '..';
-import type { HoverState, OnSelectTile, ResolvedMapSettings, ViewState } from '..';
+import type { HoverState, MapSelection, OnSelectTile, ResolvedMapSettings, ViewState } from '..';
+import { TerrainBubble } from './TerrainBubble';
+import { useTerrainBubble } from '../hooks/use-terrain-bubble';
 
 // ============================================================================
 // マップ本体（地形レイヤーとオーバーレイレイヤーの2枚のcanvas）。
@@ -21,11 +23,14 @@ import type { HoverState, OnSelectTile, ResolvedMapSettings, ViewState } from '.
 
 export type CanvasMapProps = {
     sector: SectorTerrainData;
+    selectedCoord: TileCoord | null;
+    resolveTerrain?: TerrainResolver;
     settings: ResolvedMapSettings;
     onSelect?: OnSelectTile;
+    islandName?: string;
 };
 
-export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
+export function CanvasMap({ sector, selectedCoord, resolveTerrain, settings, onSelect, islandName }: CanvasMapProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -40,7 +45,20 @@ export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
 
     const viewRef = useRef<ViewState>({ offsetX: 0, offsetY: 0, scale: initialScale });
 
-    // 初期スケールでマップ中央がcanvas中央に来るようoffsetを設定
+    const { bubble, onCellHovered, onViewChange } = useTerrainBubble({
+        terrain_grid,
+        viewRef,
+        baseTileSize,
+    });
+
+    const handleSelectTile = useCallback(
+        (selection: MapSelection | null) => {
+            // 確定したマスにはコマンド入力が開くので、バブルを重ねて出さない
+            if (selection) onCellHovered(null);
+            onSelect?.(selection);
+        },
+        [onCellHovered, onSelect]
+    );
     const initView = useCallback(
         (canvasW: number, canvasH: number) => {
             const centerMapX = (map_width / 2) * baseTileSize + baseTileSize * 0.5;
@@ -75,12 +93,14 @@ export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         renderOverlay,
     });
 
-    const { handleTileConfirm } = useTileSelection({
+    const { handleTileConfirm, clearSelection } = useTileSelection({
+        selectedCoord,
         selectedTileRef,
         cursorAnimStartRef,
         cursorLoop,
         terrain_grid,
-        onSelect,
+        onSelect: handleSelectTile,
+        renderOverlay,
     });
 
     // ポインター位置→マス座標の変換（viewはref経由で常に最新の表示状態を参照する）
@@ -95,7 +115,8 @@ export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         hoverStateRef,
         containerRef,
         resolveHoverCell,
-        handleHoverChange
+        handleHoverChange,
+        onCellHovered
     );
 
     // Canvasサイズをコンテナに追従させ、初回のみ中央揃えを実行
@@ -133,10 +154,15 @@ export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         handleResize
     );
 
+    const handleViewChange = useCallback(() => {
+        renderAll();
+        onViewChange();
+    }, [renderAll, onViewChange]);
+
     const { handlePointerDown, handlePointerMove, handlePointerUp, isDraggingRef } = usePointerPanZoom(
         containerRef,
         viewRef,
-        renderAll,
+        handleViewChange,
         {
             dragThresholdPx: settings.view.dragThresholdPx,
             minScale: settings.view.minScale,
@@ -149,7 +175,7 @@ export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         }
     );
 
-    useWheelZoom(containerRef, viewRef, renderAll, {
+    useWheelZoom(containerRef, viewRef, handleViewChange, {
         wheelZoomFactor: settings.view.wheelZoomFactor,
         minScale: settings.view.minScale,
         maxScale: settings.view.maxScale,
@@ -168,7 +194,9 @@ export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
         if (wasDragging) return;
 
         // マウス・ペンはホバー中のマスをクリックで即確定、タッチは同一マスへの2回目のタップで確定する
-        handleTapForHover(e, handleTileConfirm);
+        handleTapForHover(e, handleTileConfirm, (cell) => {
+            if (!cell) clearSelection();
+        });
     };
 
     return (
@@ -200,6 +228,15 @@ export function CanvasMap({ sector, settings, onSelect }: CanvasMapProps) {
                     ref={overlayCanvasRef}
                     style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
                 />
+                {bubble !== null && (
+                    <TerrainBubble
+                        coord={bubble.item.selection.coord}
+                        terrain={resolveTerrainDisplay(bubble.item.selection.cell.type, resolveTerrain)}
+                        islandName={islandName}
+                        anchorPosition={bubble.item.anchor}
+                        visible={bubble.visible}
+                    />
+                )}
             </div>
         </div>
     );

@@ -29,17 +29,18 @@ export function useHoverTracking<E extends HTMLElement>(
     hoverRef: RefObject<HoverState>,
     containerRef: RefObject<E | null>,
     resolveCell: (localX: number, localY: number) => HoverCell | null,
-    onHoverChange: () => void
+    onHoverChange: () => void,
+    onCellChange?: (cell: HoverCell | null) => void
 ): HoverTrackingResult<E> {
     const setHover = useCallback(
         (next: HoverState) => {
             const prev = hoverRef.current;
-            // pointermove は毎回発火するため、変化がなければ再描画を促さない
             if (prev.x === next.x && prev.y === next.y) return;
             hoverRef.current = next;
             onHoverChange();
+            onCellChange?.(next.x !== null && next.y !== null ? { x: next.x, y: next.y } : null);
         },
-        [hoverRef, onHoverChange]
+        [hoverRef, onHoverChange, onCellChange]
     );
 
     const clearHover = useCallback(() => {
@@ -89,8 +90,14 @@ export function useHoverTracking<E extends HTMLElement>(
     );
 
     const handleTapForHover = useCallback(
-        (event: ReactPointerEvent<E>, onConfirm: (cell: HoverCell) => void) => {
+        (
+            event: ReactPointerEvent<E>,
+            onConfirm: (cell: HoverCell) => void,
+            onTap?: (cell: HoverCell | null) => void
+        ) => {
             const cell = resolveEventCell(event);
+            onTap?.(cell);
+
             if (!cell) {
                 // マップ外のタップ/クリックはホバー解除
                 setHover({ x: null, y: null });

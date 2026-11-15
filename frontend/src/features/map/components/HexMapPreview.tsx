@@ -8,11 +8,16 @@ import { CanvasMap } from './CanvasMap';
 // UI配置用の9:16不可視論理枠はこのマップパネル基準で中央配置する。
 // ============================================================================
 
-export function HexMapPreview({ sector, settings, terrainImages, onSelect }: HexMapPreviewProps) {
-    const resolved = useMemo(
-        () => resolveMapSettings({ sector, settings, terrainImages, onSelect }),
-        [sector, settings, terrainImages, onSelect]
-    );
+export function HexMapPreview({
+    sector,
+    selectedCoord,
+    resolveTerrain,
+    settings,
+    terrainImages,
+    onSelect,
+    islandName,
+}: HexMapPreviewProps) {
+    const resolved = useMemo(() => resolveMapSettings({ settings, terrainImages }), [settings, terrainImages]);
 
     return (
         <div
@@ -38,7 +43,14 @@ export function HexMapPreview({ sector, settings, terrainImages, onSelect }: Hex
                     pointerEvents: 'none',
                 }}
             />
-            <CanvasMap sector={sector} settings={resolved} onSelect={onSelect} />
+            <CanvasMap
+                sector={sector}
+                selectedCoord={selectedCoord}
+                resolveTerrain={resolveTerrain}
+                settings={resolved}
+                onSelect={onSelect}
+                islandName={islandName}
+            />
         </div>
     );
 }

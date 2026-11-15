@@ -1,4 +1,6 @@
 export type IslandStatus = {
+    // 島名（所属国名）
+    name?: string;
     // 常時表示情報
     turn: number;
     timeToNextTurn: string; // 例: "0:45:12"

@@ -3,6 +3,7 @@ import type { HTMLAttributes, ReactNode } from 'react';
 import type { ReservationCommand } from '../types';
 import type { SectorTerrainData } from '@/shared/terrain-types';
 import { TerrainIcon } from './TerrainIcon';
+import { resolveTargetIslandLine, resolveStackCount } from '../command-list-item-view';
 
 export type CommandListItemProps = {
     command: ReservationCommand;
@@ -25,7 +26,6 @@ export const CommandListItem = memo(function CommandListItem({
     terrain,
     displayOrder,
     isExpanded,
-    isFocused,
     renderDetail,
     onToggleExpand,
     onSelect,
@@ -39,7 +39,8 @@ export const CommandListItem = memo(function CommandListItem({
     // 2行目: 数量・パラメータ情報（表示優先のため summaryText をそのまま出す）
     const detailLine = command.summaryText?.trim() ? command.summaryText : null;
     // 3行目: 目標の島が必要な場合は別行にする
-    const targetIslandLine = command.targetIsland?.trim() ? command.targetIsland : null;
+    const targetIslandLine = resolveTargetIslandLine(command);
+    const stackCount = resolveStackCount(command);
     // 2行分の高さで固定し、3行になる場合は全体を縮小して収める
     const isThreeLines = targetIslandLine !== null;
     // 青色（高速）の下は常に隙間なし。青色・黄色とも角丸なしの四角で統一する
@@ -64,7 +65,7 @@ export const CommandListItem = memo(function CommandListItem({
                     isFast
                         ? `${marginClass} border-cyan-200/50 bg-linear-to-b from-[#0d7f9c] via-[#0080A0] to-[#046276] text-white shadow-[inset_0_1px_0_rgba(207,250,254,0.35),0_1px_6px_rgba(8,145,178,0.35)] hover:from-[#1093b1] hover:via-[#0092b5] hover:to-[#057183]`
                         : `${marginClass} border-amber-200/50 bg-linear-to-b from-[#e89a1d] via-[#d08000] to-[#9c5f00] text-white shadow-[inset_0_1px_0_rgba(254,243,199,0.4),0_1px_6px_rgba(180,83,9,0.35)] hover:from-[#f0a832] hover:via-[#dd8d0f] hover:to-[#a96a05]`
-                } ${isFocused ? 'z-10 shadow-md ring-2 shadow-red-500/20 ring-red-500' : ''}`}
+                }`}
             >
                 {/* 上部ハイライトライン */}
                 <div
@@ -141,7 +142,7 @@ export const CommandListItem = memo(function CommandListItem({
                                 </span>
 
                                 {/* スタックバッジ */}
-                                {command.stackCount && command.stackCount > 1 && (
+                                {stackCount && stackCount > 1 && (
                                     <button
                                         type="button"
                                         onClick={(e) => {
@@ -150,7 +151,7 @@ export const CommandListItem = memo(function CommandListItem({
                                         }}
                                         className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/20 px-1.5 py-1 font-mono text-[10px] font-bold text-amber-300 hover:bg-amber-500/30"
                                     >
-                                        X {command.stackCount}
+                                        X {stackCount}
                                     </button>
                                 )}
                             </div>
@@ -170,7 +171,7 @@ export const CommandListItem = memo(function CommandListItem({
                                 <div
                                     data-testid={`command-target-line-${command.id}`}
                                     className="truncate text-left text-[10px] leading-tight text-white/90"
-                                    title={command.targetIsland}
+                                    title={targetIslandLine}
                                 >
                                     &lt;{targetIslandLine}&gt;
                                 </div>

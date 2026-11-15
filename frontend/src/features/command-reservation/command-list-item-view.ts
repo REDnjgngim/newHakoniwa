@@ -9,7 +9,13 @@ export function resolveDetailLine(command: ReservationCommand): string | null {
 }
 
 export function resolveTargetIslandLine(command: ReservationCommand): string | null {
-    return command.targetIsland?.trim() ? command.targetIsland : null;
+    const value = command.params?.targetIsland;
+    return typeof value === 'string' && value.trim() ? value : null;
+}
+
+export function resolveStackCount(command: ReservationCommand): number | undefined {
+    const value = command.params?.stackCount;
+    return typeof value === 'number' ? value : undefined;
 }
 
 export function isThreeLines(command: ReservationCommand): boolean {

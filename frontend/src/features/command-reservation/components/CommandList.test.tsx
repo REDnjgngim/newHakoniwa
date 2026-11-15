@@ -8,9 +8,30 @@ vi.mock('./CommandDetailEditor', () => ({
 
 function makeCommands(): ReservationCommand[] {
     return [
-        { id: 'a', commandType: 'normal', name: '埋め立て', estimatedTurn: 1, estimatedFundsDelta: 0 },
-        { id: 'b', commandType: 'normal', name: '食料輸出', estimatedTurn: 2, estimatedFundsDelta: 0 },
-        { id: 'c', commandType: 'fast', name: '通常ミサイル', estimatedTurn: 3, estimatedFundsDelta: 0 },
+        {
+            id: 'a',
+            commandCode: 'RECLAIM',
+            commandType: 'normal',
+            name: '埋め立て',
+            estimatedTurn: 1,
+            estimatedFundsDelta: 0,
+        },
+        {
+            id: 'b',
+            commandCode: 'EXPORT_FOOD',
+            commandType: 'normal',
+            name: '食料輸出',
+            estimatedTurn: 2,
+            estimatedFundsDelta: 0,
+        },
+        {
+            id: 'c',
+            commandCode: 'MISSILE_NORMAL',
+            commandType: 'fast',
+            name: '通常ミサイル',
+            estimatedTurn: 3,
+            estimatedFundsDelta: 0,
+        },
     ];
 }
 

@@ -5,8 +5,22 @@ import { useReservationHistory } from './use-reservation-history';
 
 function makeExtraCommands(): ReservationCommand[] {
     return [
-        { id: 'a', name: 'A', commandType: 'normal', estimatedTurn: 0, estimatedFundsDelta: 0 },
-        { id: 'b', name: 'B', commandType: 'normal', estimatedTurn: 0, estimatedFundsDelta: 0 },
+        {
+            id: 'a',
+            commandCode: 'LEVELING',
+            name: 'A',
+            commandType: 'normal',
+            estimatedTurn: 0,
+            estimatedFundsDelta: 0,
+        },
+        {
+            id: 'b',
+            commandCode: 'LEVELING',
+            name: 'B',
+            commandType: 'normal',
+            estimatedTurn: 0,
+            estimatedFundsDelta: 0,
+        },
     ];
 }
 
@@ -16,6 +30,7 @@ describe('use-reservation-history 状態遷移', () => {
         act(() =>
             result.current.addCommand({
                 id: 'c',
+                commandCode: 'LEVELING',
                 name: 'C',
                 commandType: 'normal',
                 estimatedTurn: 0,
@@ -39,7 +54,14 @@ describe('use-reservation-history 状態遷移', () => {
     it('reorderCommandsById: 中間挿入', () => {
         const three: ReservationCommand[] = [
             ...makeExtraCommands(),
-            { id: 'c', name: 'C', commandType: 'normal', estimatedTurn: 0, estimatedFundsDelta: 0 },
+            {
+                id: 'c',
+                commandCode: 'LEVELING',
+                name: 'C',
+                commandType: 'normal',
+                estimatedTurn: 0,
+                estimatedFundsDelta: 0,
+            },
         ];
         const { result } = renderHook(() => useReservationHistory(three));
         act(() => result.current.reorderCommandsById('c', 'a'));
@@ -55,6 +77,7 @@ describe('use-reservation-history 状態遷移', () => {
         act(() =>
             result.current.addCommand({
                 id: 'c',
+                commandCode: 'LEVELING',
                 name: 'C',
                 commandType: 'normal',
                 estimatedTurn: 0,
@@ -70,20 +93,22 @@ describe('use-reservation-history 状態遷移', () => {
         act(() =>
             result.current.addCommand({
                 id: 'c',
+                commandCode: 'LEVELING',
                 name: 'C',
                 commandType: 'normal',
                 estimatedTurn: 0,
                 estimatedFundsDelta: 0,
             })
         );
-        const nw = [
+        const nw: ReservationCommand[] = [
             {
                 id: 'x',
+                commandCode: 'LEVELING',
                 name: 'X',
                 commandType: 'normal',
                 estimatedTurn: 0,
                 estimatedFundsDelta: 0,
-            } as ReservationCommand,
+            },
         ];
         act(() => result.current.resetCommands(nw));
         expect(result.current.commands).toEqual(nw);
@@ -95,6 +120,7 @@ describe('use-reservation-history 状態遷移', () => {
         act(() =>
             result.current.addCommand({
                 id: 'c',
+                commandCode: 'LEVELING',
                 name: 'C',
                 commandType: 'normal',
                 estimatedTurn: 0,

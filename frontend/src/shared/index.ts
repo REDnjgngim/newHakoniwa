@@ -1,7 +1,11 @@
 export { Inspector } from './Inspector';
 export { InspectorFrame } from './InspectorFrame';
+export { TerrainSummary } from './TerrainSummary';
+export type { TerrainSummaryProps } from './TerrainSummary';
+export { usePresence } from './use-presence';
 export { useSessionState } from './use-session-state';
 export { TERRAIN_IMAGE_MAP } from './terrain-images';
-export { getTerrainTypeAt } from './terrain-lookup';
+export { getTerrainCellAt, getTerrainTypeAt, resolveTerrainDisplay, toCoordKey } from './terrain-lookup';
+export type * from './presence-types';
 export type * from './terrain-types';
 export type * from './inspector-types';

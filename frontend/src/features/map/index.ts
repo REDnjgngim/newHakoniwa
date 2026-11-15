@@ -26,9 +26,13 @@ export type {
     PinchState,
     PointerLocalPosition,
     PointerPanZoomResult,
+    PopupPosition,
     ResolvedMapSettings,
+    TerrainBubbleTarget,
     TerrainImageMap,
     TileRange,
+    UseTerrainBubbleParams,
+    UseTerrainBubbleResult,
     ViewState,
 } from './engine/types';
 // shared 由来の地形・座標型（中継削除後の直接公開）
@@ -72,6 +76,8 @@ export { drawCornerCursor, getPulseScale } from './render/corner-cursor';
 export { CanvasMap } from './components/CanvasMap';
 export type { CanvasMapProps } from './components/CanvasMap';
 export { HexMapPreview } from './components/HexMapPreview';
+export { TerrainBubble } from './components/TerrainBubble';
+export type { TerrainBubbleProps } from './engine/types';
 
 export { getPointerLocalPosition, useHoverTracking } from './hooks/use-hover-tracking';
 export { usePointerPanZoom } from './hooks/use-pointer-pan-zoom';
@@ -82,6 +88,7 @@ export { useTerrainImages } from './hooks/use-terrain-images';
 export { useMapRenderer } from './hooks/use-map-renderer';
 export { useMapAnimations } from './hooks/use-map-animations';
 export { useTileSelection } from './hooks/use-tile-selection';
+export { useTerrainBubble } from './hooks/use-terrain-bubble';
 export type { PointerPanZoomSettings } from './hooks/use-pointer-pan-zoom';
 export type { WheelZoomSettings } from './hooks/use-wheel-zoom';
 export type { ElementSize, ElementSizeLimits } from './hooks/use-element-size';

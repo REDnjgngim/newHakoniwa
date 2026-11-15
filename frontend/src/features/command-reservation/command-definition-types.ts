@@ -1,9 +1,7 @@
+import type { Coordinate, SectorData, TerrainType } from '@/shared/terrain-types';
+
 // パラメータのスキーマ種別
-export type ParameterKind =
-    | 'slider' // スライダーで数値入力
-    | 'island-select' // 島選択
-    | 'item-select' // アイテム選択
-    | 'fleet-select'; // 艦隊選択
+export type ParameterKind = 'slider' | 'island-select';
 
 // スライダー型パラメータの定義
 export type SliderParamSchema = {
@@ -18,15 +16,20 @@ export type SliderParamSchema = {
     unit?: string;
 };
 
-// 島・アイテム・艦隊選択型パラメータの定義
+// 島選択型パラメータの定義
 export type SelectParamSchema = {
-    kind: 'island-select' | 'item-select' | 'fleet-select';
+    kind: 'island-select';
     key: string; // params に格納するキー名
     label: string; // 表示ラベル
     labelSuffix: string; // IslandSearchSelect の labelSuffix
 };
 
 export type ParameterSchema = SliderParamSchema | SelectParamSchema;
+
+export type CommandExecutionContext = {
+    sector: SectorData;
+    coordinate?: Coordinate;
+};
 
 // コマンド定義
 export type CommandDefinition = {
@@ -37,4 +40,8 @@ export type CommandDefinition = {
     parameterSchemas: ParameterSchema[]; // パラメータ定義のリスト（順序が表示順）
     estimatedTurn: number;
     estimatedFundsDelta: number;
+    cost: number;
+    allowedTerrains?: TerrainType[];
+    allowedObjects?: string[];
+    requiresNoObject?: boolean;
 };

@@ -1,5 +1,13 @@
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
-import type { SectorTerrainData, TerrainCell, TerrainType, TileCoord } from '@/shared/terrain-types';
+import type {
+    SectorTerrainData,
+    TerrainCell,
+    TerrainDisplay,
+    TerrainResolver,
+    TerrainType,
+    TileCoord,
+} from '@/shared/terrain-types';
+import type { Presence } from '@/shared/presence-types';
 
 // マップ表示・描画設定の型定義
 export type MapRenderOptions = {
@@ -132,7 +140,7 @@ export type MapSelection = {
     cell: TerrainCell;
 };
 
-export type OnSelectTile = (selection: MapSelection) => void;
+export type OnSelectTile = (selection: MapSelection | null) => void;
 
 // 地形画像マップ（呼び出し側が注入する。全キー必須ではない）
 export type TerrainImageMap = Partial<Record<TerrainType, string>>;
@@ -140,9 +148,14 @@ export type TerrainImageMap = Partial<Record<TerrainType, string>>;
 // エントリコンポーネントのprops（外部から差し替え可能な入力）
 export type HexMapPreviewProps = {
     sector: SectorTerrainData;
+    /** 選択中のマス（制御コンポーネント。未選択は null） */
+    selectedCoord: TileCoord | null;
+    /** 地形の表示名・画像の解決方法（ルールから注入する） */
+    resolveTerrain?: TerrainResolver;
     settings?: MapSettingsInput;
     terrainImages?: TerrainImageMap;
     onSelect?: OnSelectTile;
+    islandName?: string;
 };
 
 // ============================================================================
@@ -176,6 +189,28 @@ export type ResolvedMapSettings = {
 // ホバー対象のセル座標（マス座標の別名）
 export type HoverCell = TileCoord;
 
+// ホバー/タップ1回で表示される地形情報バブルのProps
+export type TerrainBubbleProps = {
+    coord: TileCoord;
+    terrain: TerrainDisplay;
+    islandName?: string;
+    /** バブルアンカー位置（マスの中心スクリーン座標）。バブルはここから上方向へオフセットして表示する */
+    anchorPosition: PopupPosition;
+    visible: boolean;
+};
+
+// ホバーバブルの表示対象（マス情報と、マス中心のスクリーン座標）
+export type TerrainBubbleTarget = {
+    selection: MapSelection;
+    anchor: PopupPosition;
+};
+
+// ポップアップ配置用の位置情報
+export type PopupPosition = {
+    x: number;
+    y: number;
+};
+
 // ホバー中の状態。未ホバー時は x / y に null が入る
 export type HoverState = {
     x: number | null;
@@ -201,8 +236,12 @@ export type HoverTrackingResult<E extends HTMLElement> = {
     handlePointerMoveForHover: (event: ReactPointerEvent<E>) => void;
     // pointerleave 用: ホバーを解除する（タッチでは解除しない）
     handlePointerLeaveForHover: (event?: ReactPointerEvent<E>) => void;
-    // pointerup 用: ホバー中と同一セルなら onConfirm、別セルならホバー移動のみ
-    handleTapForHover: (event: ReactPointerEvent<E>, onConfirm: (cell: HoverCell) => void) => void;
+    // pointerup 用: ホバー中と同一セルなら onConfirm、別セルならホバー移動のみ。onTap はセル判定直後に通知
+    handleTapForHover: (
+        event: ReactPointerEvent<E>,
+        onConfirm: (cell: HoverCell) => void,
+        onTap?: (cell: HoverCell | null) => void
+    ) => void;
 };
 
 export type PointerPanZoomResult<E extends HTMLElement> = {
@@ -224,4 +263,17 @@ export type AnimationLoopController = {
     start: () => void;
     stop: () => void;
     isRunning: () => boolean;
+};
+export type UseTerrainBubbleParams = {
+    terrain_grid: SectorTerrainData['terrain_grid'];
+    viewRef: RefObject<ViewState>;
+    baseTileSize: number;
+    fadeOutDelayMs?: number;
+    viewChangeDebounceMs?: number;
+};
+
+export type UseTerrainBubbleResult = {
+    bubble: Presence<TerrainBubbleTarget> | null;
+    onCellHovered: (cell: HoverCell | null) => void;
+    onViewChange: () => void;
 };

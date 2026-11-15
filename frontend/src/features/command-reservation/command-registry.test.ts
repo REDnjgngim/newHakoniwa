@@ -2,13 +2,13 @@ import { getCommandDefinition, getCommandDefinitionByName, COMMAND_REGISTRY } fr
 
 describe('command-registry', () => {
     it('存在する code で定義を返す', () => {
-        expect(getCommandDefinition('MISSILE')?.commandCode).toBe('MISSILE');
+        expect(getCommandDefinition('MISSILE_NORMAL')?.commandCode).toBe('MISSILE_NORMAL');
     });
     it('未登録 code で undefined', () => {
         expect(getCommandDefinition('NOPE')).toBeUndefined();
     });
     it('存在する name で定義を返す', () => {
-        expect(getCommandDefinitionByName('通常ミサイル')?.commandCode).toBe('MISSILE');
+        expect(getCommandDefinitionByName('通常ミサイル')?.commandCode).toBe('MISSILE_NORMAL');
     });
     it('未登録 name で undefined', () => {
         expect(getCommandDefinitionByName('存在しない')).toBeUndefined();
@@ -19,7 +19,7 @@ describe('command-registry', () => {
     });
     it('hasCoordinate が座標必須コマンドに付与', () => {
         const withCoord = COMMAND_REGISTRY.filter((d) => d.hasCoordinate).map((d) => d.commandCode);
-        expect(withCoord).toContain('MISSILE');
+        expect(withCoord).toContain('MISSILE_NORMAL');
     });
     it('parameterSchemas の key が一意', () => {
         for (const def of COMMAND_REGISTRY) {

@@ -1,7 +1,7 @@
+import { getClassicTerrain } from '@/rules/classic';
 import { TERRAIN_IMAGE_MAP } from '@/shared/terrain-images';
 import { getTerrainTypeAt } from '@/shared/terrain-lookup';
-import type { SectorTerrainData } from '@/shared/terrain-types';
-import type { Coordinate } from '@/shared/terrain-types';
+import type { Coordinate, SectorTerrainData } from '@/shared/terrain-types';
 
 export type TerrainIconProps = {
     coordinate?: Coordinate;
@@ -9,25 +9,20 @@ export type TerrainIconProps = {
     size?: number;
 };
 
-const TERRAIN_LABEL: Record<string, string> = {
-    sea: '海',
-    shallow: '浅瀬',
-    wasteland: '荒地',
-    plains: '平野',
-    mountain: '山',
-};
-
 /** コマンド座標の地形をマップと同じ画像で表示する */
 export function TerrainIcon({ coordinate, terrain, size = 20 }: TerrainIconProps) {
     if (!coordinate || !terrain) return null;
     const terrainType = getTerrainTypeAt(terrain, coordinate);
     if (!terrainType) return null;
-    const src = TERRAIN_IMAGE_MAP[terrainType];
+
+    const terrainDef = getClassicTerrain(terrainType);
+    const src = terrainDef?.image ?? TERRAIN_IMAGE_MAP[terrainType];
+    const label = terrainDef?.name ?? terrainType;
 
     return (
         <img
             src={src}
-            alt={`地形:${TERRAIN_LABEL[terrainType] ?? terrainType}`}
+            alt={`地形:${label}`}
             width={size}
             height={size}
             draggable={false}
