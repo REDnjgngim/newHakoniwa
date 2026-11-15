@@ -11,6 +11,8 @@ export type UseCommandListAnimationOptions = {
     commands: ReservationCommand[];
     listContainerRef: RefObject<HTMLDivElement | null>;
     viewportRef?: RefObject<HTMLDivElement | null>;
+    /** 並び替えドラッグ・着地アニメーション中は true を渡し、FLIP の二重発火を抑止する */
+    isReorderActive?: boolean;
 };
 
 export type UseCommandListAnimationReturn = {
@@ -37,6 +39,7 @@ export function useCommandListAnimation({
     commands,
     listContainerRef,
     viewportRef,
+    isReorderActive = false,
 }: UseCommandListAnimationOptions): UseCommandListAnimationReturn {
     const rowMapRef = useRef<Map<string, HTMLDivElement>>(new Map());
     const itemMapRef = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -46,6 +49,7 @@ export function useCommandListAnimation({
     const flipAnimationsRef = useRef<Map<string, Animation>>(new Map());
     const prevCommandIdsRef = useRef<Set<string>>(new Set());
     const isInitializedRef = useRef<boolean>(false);
+    const prevIsReorderActiveRef = useRef<boolean>(false);
 
     const exitTimersRef = useRef<Map<string, number>>(new Map());
     const exitingStartedIdsRef = useRef<Set<string>>(new Set());
@@ -153,6 +157,9 @@ export function useCommandListAnimation({
 
     // 位置変化の FLIP アニメーションと直前座標スナップショット更新
     useLayoutEffect(() => {
+        const skipFlip = isReorderActive || prevIsReorderActiveRef.current;
+        prevIsReorderActiveRef.current = isReorderActive;
+
         const container = listContainerRef.current;
         const containerRect = container ? container.getBoundingClientRect() : null;
         const nextSnapshots = new Map<string, ExitingCommandItem>();
@@ -182,7 +189,7 @@ export function useCommandListAnimation({
             const nextTop = rowRect.top - containerRect.top;
             const prevSnapshot = prevSnapshotsRef.current.get(cmd.id);
 
-            if (prevSnapshot !== undefined) {
+            if (!skipFlip && prevSnapshot !== undefined) {
                 const deltaY = prevSnapshot.top + currentTranslateY - nextTop;
                 if (Math.abs(deltaY) >= 0.5 && typeof el.animate === 'function') {
                     const anim = el.animate(
@@ -210,7 +217,7 @@ export function useCommandListAnimation({
         });
 
         prevSnapshotsRef.current = nextSnapshots;
-    });
+    }, [commands, isReorderActive, listContainerRef]);
 
     // 退場中アイテムの縮小フェードアウトアニメーション開始
     useLayoutEffect(() => {
