@@ -38,8 +38,8 @@ export function CommandInputCard({ def, quantity, onSelect }: CommandInputCardPr
                     ⓘ
                 </button>
             </div>
-            <div className={`truncate text-left text-white/90 ${quantity >= 2 ? 'font-bold' : ''}`}>
-                費用 {totalCost}億円
+            <div className="truncate text-left text-white/90">
+                費用 <span className={quantity >= 2 ? 'font-bold' : ''}>{totalCost}</span>億円
             </div>
         </button>
     );

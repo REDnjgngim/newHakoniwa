@@ -31,9 +31,13 @@ export function TerrainInfoPopup({
                 top: `${position.y}px`,
                 transform: 'translateX(-50%)',
             }}
-            className={`pointer-events-none absolute z-40 max-h-[85vh] w-4/5 max-w-120 overflow-y-auto rounded-xs border border-cyan-400/50 bg-[rgba(10,25,45,0.75)] p-1 text-left shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all duration-150 ease-out md:w-1/3 md:max-w-none ${
+            className={`pointer-events-auto absolute z-40 max-h-[85vh] w-4/5 max-w-120 overflow-y-auto rounded-xs border border-cyan-400/50 bg-[rgba(10,25,45,0.75)] p-1 text-left shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all duration-150 ease-out md:w-1/3 md:max-w-none ${
                 visible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
             }`}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerMove={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
         >
             <div className="flex items-center justify-start gap-1">
                 {/* 左側: 地形アイコン */}
@@ -58,13 +62,17 @@ export function TerrainInfoPopup({
                 </div>
 
                 {/* 右側: コマンド開閉ボタン */}
-                <button
-                    type="button"
-                    onClick={onToggleCommandPanel}
-                    className="pointer-events-auto flex h-11 w-20 shrink-0 cursor-pointer items-center justify-center rounded-xs border border-cyan-400/30 bg-cyan-900/40 text-xs font-medium text-cyan-300 transition-colors select-none hover:bg-cyan-800/50"
-                >
-                    {isCommandOpen ? '▲ 閉じる' : '▼ コマンド'}
-                </button>
+                {isCommandOpen && (
+                    <button
+                        type="button"
+                        onClick={onToggleCommandPanel}
+                        className="pointer-events-auto flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xs bg-cyan-900/40 text-3xl leading-none font-medium text-cyan-300 transition-colors select-none hover:bg-cyan-800/50"
+                    >
+                        <span className="leading-none" style={{ transform: 'translateY(-2px)' }}>
+                            ×
+                        </span>
+                    </button>
+                )}
             </div>
 
             {isCommandOpen && (
