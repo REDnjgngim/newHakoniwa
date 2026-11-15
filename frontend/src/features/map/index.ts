@@ -79,8 +79,8 @@ export { drawCornerCursor, getPulseScale } from './render/corner-cursor';
 export { CanvasMap } from './components/CanvasMap';
 export type { CanvasMapProps } from './components/CanvasMap';
 export { HexMapPreview } from './components/HexMapPreview';
-export { TerrainInfoPopup } from './components/TerrainInfoPopup';
-export type { TerrainInfoPopupProps } from './components/TerrainInfoPopup';
+export { TerrainBubble } from './components/TerrainBubble';
+export type { TerrainBubbleProps } from './engine/types';
 
 export { getPointerLocalPosition, useHoverTracking } from './hooks/use-hover-tracking';
 export { usePointerPanZoom } from './hooks/use-pointer-pan-zoom';

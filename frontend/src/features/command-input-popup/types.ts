@@ -7,9 +7,10 @@ export type CommandInputMode = 'classic' | 'admin';
 export type CommandInputPopupProps = {
     coord: TileCoord;
     cell: TerrainCell;
-    position: PopupPosition;
-    /** TerrainInfoPopup の高さ（コマンドポップアップのtop基点オフセット）。px単位 */
-    terrainPopupHeightPx: number;
+    terrainName: string;
+    terrainImage?: string;
+    islandName?: string;
+    anchorPosition: PopupPosition;
     visible: boolean;
     onClose: () => void;
     onSelectCommand: (def: CommandDefinition, quantity: number) => void;

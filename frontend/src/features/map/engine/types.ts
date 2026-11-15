@@ -1,6 +1,5 @@
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
 import type { SectorTerrainData, TerrainCell, TerrainType, TileCoord } from '@/shared/terrain-types';
-import type { CommandDefinition } from '@/features/command-reservation/command-definition-types';
 
 // マップ表示・描画設定の型定義
 export type MapRenderOptions = {
@@ -185,20 +184,15 @@ export type PopupState = {
     visible: boolean;
 };
 
-// 地形情報ポップアップのProps
-export type TerrainInfoPopupProps = {
+// ホバー/タップ1回で表示される地形情報バブルのProps
+export type TerrainBubbleProps = {
     coord: TileCoord;
     terrainName: string;
     terrainImage?: string;
     islandName?: string;
-    position: PopupPosition;
+    /** バブルアンカー位置（マスの中心スクリーン座標）。バブルはここから上方向へオフセットして表示する */
+    anchorPosition: PopupPosition;
     visible: boolean;
-    /** コマンドパネルが現在開いているか */
-    isCommandOpen: boolean;
-    /** [▼コマンド] / [▲ 閉じる] ボタン押下時のコールバック */
-    onToggleCommandPanel: () => void;
-    onSelectCommand?: (def: CommandDefinition, quantity: number) => void;
-    centered?: boolean;
 };
 
 // ポップアップ配置用の位置情報
@@ -264,14 +258,13 @@ export type UsePopupStateParams = {
     terrain_grid: SectorTerrainData['terrain_grid'];
     viewRef: RefObject<ViewState>;
     baseTileSize: number;
-    containerSizeRef: RefObject<{ width: number; height: number }>;
     fadeOutDelayMs?: number;
     viewChangeDebounceMs?: number;
 };
 
 export type UsePopupStateResult = {
     popup: PopupState | null;
-    popupPosition: PopupPosition;
+    anchorPosition: PopupPosition;
     onCellHovered: (cell: HoverCell | null) => void;
     onViewChange: () => void;
 };

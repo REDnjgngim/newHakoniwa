@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type PointerEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react';
 import type { SectorTerrainData } from '@/shared/terrain-types';
 import {
     clampPanOffset,
@@ -13,9 +13,10 @@ import {
     useWheelZoom,
 } from '..';
 import type { HoverState, OnSelectTile, ResolvedMapSettings, ViewState } from '..';
-import { TerrainInfoPopup } from './TerrainInfoPopup';
+import { TerrainBubble } from './TerrainBubble';
 import { usePopupState } from '../hooks/use-popup-state';
 import { getClassicTerrain } from '@/rules/classic';
+import { CommandInputPopup } from '@/features/command-input-popup';
 import { useGameSessionActions } from '@/features/game-session';
 
 // ============================================================================
@@ -47,45 +48,85 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
 
     const {
         popup,
-        popupPosition,
+        anchorPosition,
         onCellHovered: onCellHoveredRaw,
         onViewChange,
     } = usePopupState({
         terrain_grid,
         viewRef,
         baseTileSize,
-        containerSizeRef: sizeRef,
     });
 
-    const [isCommandOpen, setIsCommandOpen] = useState<boolean>(false);
-    const [isTileSelected, setIsTileSelected] = useState<boolean>(false);
+    const [selectedPopup, setSelectedPopup] = useState<{
+        coord: { x: number; y: number };
+        cell: import('@/shared/terrain-types').TerrainCell;
+        visible: boolean;
+    } | null>(null);
+    const [selectedAnchor, setSelectedAnchor] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+    const [commandAnimKey, setCommandAnimKey] = useState(0);
+    const commandFadeTimerRef = useRef<number | null>(null);
+    const commandRafRef = useRef<number | null>(null);
 
     const { addCommand } = useGameSessionActions();
 
+    const clearCommandFadeTimer = useCallback(() => {
+        if (commandFadeTimerRef.current !== null) {
+            window.clearTimeout(commandFadeTimerRef.current);
+            commandFadeTimerRef.current = null;
+        }
+    }, []);
+
+    const clearCommandRaf = useCallback(() => {
+        if (commandRafRef.current !== null) {
+            window.cancelAnimationFrame(commandRafRef.current);
+            commandRafRef.current = null;
+        }
+    }, []);
+
+    const closeCommandPopup = useCallback(() => {
+        clearCommandFadeTimer();
+        clearCommandRaf();
+        setSelectedPopup((prev) => (prev ? { ...prev, visible: false } : null));
+        commandFadeTimerRef.current = window.setTimeout(() => {
+            setSelectedPopup(null);
+        }, 150);
+    }, [clearCommandFadeTimer, clearCommandRaf]);
+
+    useEffect(() => {
+        return () => {
+            clearCommandFadeTimer();
+            clearCommandRaf();
+        };
+    }, [clearCommandFadeTimer, clearCommandRaf]);
+
     const handleCellHovered = useCallback(
         (cell: import('../engine/types').HoverCell | null) => {
-            // コマンドポップアップ表示中はホバーによる情報ポップアップ更新を抑止
-            if (isCommandOpen) return;
-            setIsTileSelected(false);
             onCellHoveredRaw(cell);
         },
-        [isCommandOpen, onCellHoveredRaw]
+        [onCellHoveredRaw]
     );
 
     const handleSelectTile = useCallback(
         (selection: Parameters<OnSelectTile>[0] | null) => {
             if (selection) {
-                onCellHoveredRaw({ x: selection.coord.x, y: selection.coord.y });
-                setIsCommandOpen(true);
-                setIsTileSelected(true);
-            } else {
+                clearCommandFadeTimer();
+                clearCommandRaf();
+                setCommandAnimKey((k) => k + 1);
                 onCellHoveredRaw(null);
-                setIsCommandOpen(false);
-                setIsTileSelected(false);
+                setSelectedPopup({ coord: selection.coord, cell: selection.cell, visible: false });
+                setSelectedAnchor({
+                    x: (sizeRef.current.width || 0) * 0.5,
+                    y: (sizeRef.current.height || 0) * 0.5,
+                });
+                commandRafRef.current = window.requestAnimationFrame(() => {
+                    setSelectedPopup((prev) => (prev ? { ...prev, visible: true } : prev));
+                });
+            } else {
+                closeCommandPopup();
             }
             onSelect?.(selection);
         },
-        [onCellHoveredRaw, onSelect]
+        [clearCommandFadeTimer, clearCommandRaf, closeCommandPopup, onCellHoveredRaw, onSelect]
     );
     const initView = useCallback(
         (canvasW: number, canvasH: number) => {
@@ -224,19 +265,16 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
         handleTapForHover(e, handleTileConfirm, (cell) => {
             const selected = selectedTileRef.current;
             if (selected) {
-                // カーソル表示中に他の箇所（別マスやマップ外）がタップされたら選択を解除する
-                const isOther = !cell || cell.x !== selected.x || cell.y !== selected.y;
-                if (isOther) {
+                // マップ外タップ時、またはポップアップ非表示中に別マスがタップされたら選択を解除する
+                // （ポップアップ表示中に別マスを1回タップしただけでは消さない）
+                const shouldClear =
+                    !cell || (!selectedPopup?.visible && (cell.x !== selected.x || cell.y !== selected.y));
+                if (shouldClear) {
                     clearSelection();
                 }
             }
         });
     };
-
-    const effectivePopupPosition =
-        isTileSelected && popup !== null
-            ? { x: (sizeRef.current.width || 0) / 2, y: (sizeRef.current.height || 0) * 0.5 }
-            : popupPosition;
 
     return (
         <div className="relative size-full min-h-0">
@@ -271,22 +309,38 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
                     (() => {
                         const terrain = getClassicTerrain(popup.cell.type);
                         return (
-                            <TerrainInfoPopup
+                            <TerrainBubble
                                 coord={popup.coord}
                                 terrainName={terrain?.name ?? popup.cell.type}
                                 terrainImage={terrain?.image}
                                 islandName={islandName}
-                                position={effectivePopupPosition}
+                                anchorPosition={anchorPosition}
                                 visible={popup.visible}
-                                isCommandOpen={isCommandOpen}
-                                onToggleCommandPanel={() => setIsCommandOpen((v) => !v)}
+                            />
+                        );
+                    })()}
+
+                {selectedPopup !== null &&
+                    (() => {
+                        const terrain = getClassicTerrain(selectedPopup.cell.type);
+                        return (
+                            <CommandInputPopup
+                                key={commandAnimKey}
+                                coord={selectedPopup.coord}
+                                cell={selectedPopup.cell}
+                                terrainName={terrain?.name ?? selectedPopup.cell.type}
+                                terrainImage={terrain?.image}
+                                islandName={islandName}
+                                anchorPosition={selectedAnchor}
+                                visible={selectedPopup.visible}
+                                onClose={closeCommandPopup}
                                 onSelectCommand={(def, quantity) => {
                                     addCommand({
                                         id: crypto.randomUUID(),
                                         commandCode: def.commandCode,
                                         commandType: def.commandType,
                                         name: def.name,
-                                        coordinate: def.hasCoordinate ? popup.coord : undefined,
+                                        coordinate: def.hasCoordinate ? selectedPopup.coord : undefined,
                                         estimatedTurn: def.estimatedTurn,
                                         estimatedFundsDelta: def.estimatedFundsDelta,
                                         params: quantity > 1 ? { stackCount: quantity } : undefined,

@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { HoverCell, PopupPosition, PopupState, UsePopupStateParams, UsePopupStateResult } from '../engine/types';
-import { calculatePopupPosition, tileToPixel } from '../engine/geometry';
+import { tileToPixel } from '../engine/geometry';
 
 export function usePopupState({
     terrain_grid,
     viewRef,
     baseTileSize,
-    containerSizeRef,
     fadeOutDelayMs = 150,
     viewChangeDebounceMs = 100,
 }: UsePopupStateParams): UsePopupStateResult {
@@ -74,25 +73,13 @@ export function usePopupState({
         };
     }, [clearFadeTimer, clearRaf, clearViewChangeTimer]);
 
-    const popupPosition: PopupPosition =
+    const anchorPosition: PopupPosition =
         popup !== null
             ? (() => {
-                  const containerSize = containerSizeRef.current;
                   const { px, py } = tileToPixel(popup.coord.x, popup.coord.y, viewRef.current, baseTileSize);
-                  const containerWidth = containerSize.width > 0 ? containerSize.width : 480 + 16;
-                  const popupWidth = Math.min(480, containerWidth * 0.8);
-                  const containerHeight = containerSize.height > 0 ? containerSize.height : 0;
-                  // popup height unknown; pass a reasonable default (60) for clamping
-                  return calculatePopupPosition(
-                      px,
-                      py,
-                      popupWidth,
-                      60,
-                      containerWidth,
-                      containerHeight > 0 ? containerHeight : 9999
-                  );
+                  return { x: px, y: py };
               })()
-            : { x: 8, y: 8 };
+            : { x: 0, y: 0 };
 
-    return { popup, popupPosition, onCellHovered, onViewChange };
+    return { popup, anchorPosition, onCellHovered, onViewChange };
 }
