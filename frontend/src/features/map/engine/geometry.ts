@@ -132,37 +132,3 @@ export function clampPanOffset(
         scale,
     };
 }
-
-export const POPUP_OFFSET_X = 70;
-export const POPUP_OFFSET_Y = 50;
-
-export function calculatePopupPosition(
-    tilePx: number,
-    tilePy: number,
-    popupWidth: number,
-    popupHeight: number,
-    containerWidth: number,
-    containerHeight: number,
-    offsetX = POPUP_OFFSET_X,
-    offsetY = POPUP_OFFSET_Y
-): { x: number; y: number } {
-    let x = tilePx + offsetX;
-    let y = tilePy + offsetY;
-
-    // x はポップアップ中心座標として扱う
-    const halfWidth = popupWidth / 2;
-    if (x + halfWidth > containerWidth - 8) {
-        x = Math.max(halfWidth + 8, containerWidth - halfWidth - 8);
-    }
-    if (x - halfWidth < 8) {
-        x = halfWidth + 8;
-    }
-    if (y + popupHeight > containerHeight - 8) {
-        y = Math.max(8, containerHeight - popupHeight - 8);
-    }
-
-    return {
-        x: Math.max(8, x),
-        y: Math.max(8, y),
-    };
-}

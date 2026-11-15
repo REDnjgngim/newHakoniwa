@@ -1,5 +1,5 @@
 import { CommandInputCard } from './CommandInputCard';
-import type { CommandDefinition } from '@/features/command-reservation/command-definition-types';
+import type { CommandDefinition } from '@/features/command-reservation';
 
 export type CommandInputGridProps = {
     commands: CommandDefinition[];

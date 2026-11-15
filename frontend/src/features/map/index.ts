@@ -27,12 +27,12 @@ export type {
     PointerLocalPosition,
     PointerPanZoomResult,
     PopupPosition,
-    PopupState,
     ResolvedMapSettings,
+    TerrainBubbleTarget,
     TerrainImageMap,
     TileRange,
-    UsePopupStateParams,
-    UsePopupStateResult,
+    UseTerrainBubbleParams,
+    UseTerrainBubbleResult,
     ViewState,
 } from './engine/types';
 // shared 由来の地形・座標型（中継削除後の直接公開）
@@ -50,15 +50,12 @@ export {
 
 // 幾何・Canvas
 export {
-    calculatePopupPosition,
     clamp,
     clampPanOffset,
     distance,
     getVisibleLabelRange,
     getVisibleRange,
     pixelToTile,
-    POPUP_OFFSET_X,
-    POPUP_OFFSET_Y,
     tileToPixel,
     zoomAroundPoint,
 } from './engine/geometry';
@@ -91,7 +88,7 @@ export { useTerrainImages } from './hooks/use-terrain-images';
 export { useMapRenderer } from './hooks/use-map-renderer';
 export { useMapAnimations } from './hooks/use-map-animations';
 export { useTileSelection } from './hooks/use-tile-selection';
-export { usePopupState } from './hooks/use-popup-state';
+export { useTerrainBubble } from './hooks/use-terrain-bubble';
 export type { PointerPanZoomSettings } from './hooks/use-pointer-pan-zoom';
 export type { WheelZoomSettings } from './hooks/use-wheel-zoom';
 export type { ElementSize, ElementSizeLimits } from './hooks/use-element-size';

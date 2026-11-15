@@ -1,2 +1,3 @@
 export { CommandInputPopup } from './components/CommandInputPopup';
-export type { CommandInputPopupProps, CommandInputMode } from './types';
+export { CommandInputPopupContainer } from './components/CommandInputPopupContainer';
+export type { CommandInputPopupProps, CommandInputPopupContainerProps, CommandInputMode } from './types';

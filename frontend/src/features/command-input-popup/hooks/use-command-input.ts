@@ -1,21 +1,17 @@
-import { useMemo, useState } from 'react';
-import { COMMAND_REGISTRY } from '@/features/command-reservation/command-registry';
+import { useCallback, useMemo, useState } from 'react';
+import { COMMAND_REGISTRY } from '@/features/command-reservation';
+import { clampQuantity, filterCommandsByMode, QUANTITY_MIN } from '../command-input-logic';
 import type { CommandInputMode, UseCommandInputResult } from '../types';
 
 export function useCommandInput(): UseCommandInputResult {
     const [activeMode, setActiveMode] = useState<CommandInputMode>('classic');
-    const [quantity, setQuantity] = useState<number>(1);
+    const [quantity, setQuantity] = useState<number>(QUANTITY_MIN);
 
-    const setQuantityClamped = (q: number) => {
-        setQuantity(Math.max(1, Math.min(99, q)));
-    };
+    const setQuantityClamped = useCallback((q: number) => {
+        setQuantity(clampQuantity(q));
+    }, []);
 
-    const visibleCommands = useMemo(() => {
-        if (activeMode === 'classic') {
-            return COMMAND_REGISTRY.filter((def) => def.hasCoordinate);
-        }
-        return COMMAND_REGISTRY.filter((def) => !def.hasCoordinate);
-    }, [activeMode]);
+    const visibleCommands = useMemo(() => filterCommandsByMode(COMMAND_REGISTRY, activeMode), [activeMode]);
 
     return {
         activeMode,

@@ -1,7 +1,6 @@
-import { useCallback, type RefObject } from 'react';
-import type { SectorTerrainData } from '@/shared/terrain-types';
+import { useCallback, useEffect, type RefObject } from 'react';
+import type { SectorTerrainData, TileCoord } from '@/shared/terrain-types';
 import type { AnimationLoopController, OnSelectTile } from '../engine/types';
-import type { TileCoord } from '@/shared/terrain-types';
 
 // ============================================================================
 // タイル選択の確定処理を提供するフック。onSelect 通知・
@@ -9,6 +8,7 @@ import type { TileCoord } from '@/shared/terrain-types';
 // ============================================================================
 
 export type TileSelectionParams = {
+    selectedCoord: TileCoord | null;
     selectedTileRef: RefObject<TileCoord | null>;
     cursorAnimStartRef: RefObject<number>;
     cursorLoop: AnimationLoopController;
@@ -22,8 +22,28 @@ export type TileSelectionResult = {
     clearSelection: () => void;
 };
 
+function isSameTile(a: TileCoord | null, b: TileCoord | null): boolean {
+    if (a === b) return true;
+    if (!a || !b) return false;
+    return a.x === b.x && a.y === b.y;
+}
+
 export function useTileSelection(params: TileSelectionParams): TileSelectionResult {
-    const { selectedTileRef, cursorAnimStartRef, cursorLoop, terrain_grid, onSelect, renderOverlay } = params;
+    const { selectedCoord, selectedTileRef, cursorAnimStartRef, cursorLoop, terrain_grid, onSelect, renderOverlay } =
+        params;
+
+    // 外部（GameSession）で選択が変わったときだけカーソル表示を合わせる。確定操作で ref は更新済みなので二重に開始しない
+    useEffect(() => {
+        if (isSameTile(selectedTileRef.current, selectedCoord)) return;
+        selectedTileRef.current = selectedCoord;
+        if (selectedCoord) {
+            cursorAnimStartRef.current = performance.now();
+            cursorLoop.start();
+        } else {
+            cursorLoop.stop();
+            renderOverlay?.();
+        }
+    }, [selectedCoord, selectedTileRef, cursorAnimStartRef, cursorLoop, renderOverlay]);
 
     const handleTileConfirm = useCallback(
         (tile: TileCoord) => {

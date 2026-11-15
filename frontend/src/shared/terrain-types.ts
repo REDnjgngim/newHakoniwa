@@ -14,6 +14,15 @@ export type TerrainDefinition = {
     image?: string;
 };
 
+/** 地形種別から表示用の地形定義を引くリゾルバ（ルールごとに注入する） */
+export type TerrainResolver = (type: TerrainType) => TerrainDefinition | undefined;
+
+/** UI 表示用に解決した地形情報（未定義の地形は name に種別名が入る） */
+export type TerrainDisplay = {
+    name: string;
+    image?: string;
+};
+
 export type TerrainCell = {
     type: TerrainType;
     has_impact_mark?: boolean;

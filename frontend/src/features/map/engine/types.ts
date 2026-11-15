@@ -1,5 +1,13 @@
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
-import type { SectorTerrainData, TerrainCell, TerrainType, TileCoord } from '@/shared/terrain-types';
+import type {
+    SectorTerrainData,
+    TerrainCell,
+    TerrainDisplay,
+    TerrainResolver,
+    TerrainType,
+    TileCoord,
+} from '@/shared/terrain-types';
+import type { Presence } from '@/shared/presence-types';
 
 // マップ表示・描画設定の型定義
 export type MapRenderOptions = {
@@ -140,6 +148,10 @@ export type TerrainImageMap = Partial<Record<TerrainType, string>>;
 // エントリコンポーネントのprops（外部から差し替え可能な入力）
 export type HexMapPreviewProps = {
     sector: SectorTerrainData;
+    /** 選択中のマス（制御コンポーネント。未選択は null） */
+    selectedCoord: TileCoord | null;
+    /** 地形の表示名・画像の解決方法（ルールから注入する） */
+    resolveTerrain?: TerrainResolver;
     settings?: MapSettingsInput;
     terrainImages?: TerrainImageMap;
     onSelect?: OnSelectTile;
@@ -177,22 +189,20 @@ export type ResolvedMapSettings = {
 // ホバー対象のセル座標（マス座標の別名）
 export type HoverCell = TileCoord;
 
-// ポップアップ内部状態
-export type PopupState = {
-    coord: TileCoord;
-    cell: TerrainCell;
-    visible: boolean;
-};
-
 // ホバー/タップ1回で表示される地形情報バブルのProps
 export type TerrainBubbleProps = {
     coord: TileCoord;
-    terrainName: string;
-    terrainImage?: string;
+    terrain: TerrainDisplay;
     islandName?: string;
     /** バブルアンカー位置（マスの中心スクリーン座標）。バブルはここから上方向へオフセットして表示する */
     anchorPosition: PopupPosition;
     visible: boolean;
+};
+
+// ホバーバブルの表示対象（マス情報と、マス中心のスクリーン座標）
+export type TerrainBubbleTarget = {
+    selection: MapSelection;
+    anchor: PopupPosition;
 };
 
 // ポップアップ配置用の位置情報
@@ -254,7 +264,7 @@ export type AnimationLoopController = {
     stop: () => void;
     isRunning: () => boolean;
 };
-export type UsePopupStateParams = {
+export type UseTerrainBubbleParams = {
     terrain_grid: SectorTerrainData['terrain_grid'];
     viewRef: RefObject<ViewState>;
     baseTileSize: number;
@@ -262,9 +272,8 @@ export type UsePopupStateParams = {
     viewChangeDebounceMs?: number;
 };
 
-export type UsePopupStateResult = {
-    popup: PopupState | null;
-    anchorPosition: PopupPosition;
+export type UseTerrainBubbleResult = {
+    bubble: Presence<TerrainBubbleTarget> | null;
     onCellHovered: (cell: HoverCell | null) => void;
     onViewChange: () => void;
 };

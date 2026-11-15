@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react';
-import type { SectorTerrainData } from '@/shared/terrain-types';
+import { useCallback, useRef, type PointerEvent } from 'react';
+import { resolveTerrainDisplay, type SectorTerrainData, type TerrainResolver, type TileCoord } from '@/shared';
 import {
     clampPanOffset,
     pixelToTile,
@@ -12,13 +12,9 @@ import {
     useTileSelection,
     useWheelZoom,
 } from '..';
-import type { HoverState, OnSelectTile, ResolvedMapSettings, ViewState } from '..';
+import type { HoverState, MapSelection, OnSelectTile, ResolvedMapSettings, ViewState } from '..';
 import { TerrainBubble } from './TerrainBubble';
-import { usePopupState } from '../hooks/use-popup-state';
-import { getClassicTerrain } from '@/rules/classic';
-import { CommandInputPopup } from '@/features/command-input-popup';
-import { useGameSessionActions } from '@/features/game-session';
-import { buildReservationCommandFromDefinition } from '@/features/command-reservation/command-detail-logic';
+import { useTerrainBubble } from '../hooks/use-terrain-bubble';
 
 // ============================================================================
 // マップ本体（地形レイヤーとオーバーレイレイヤーの2枚のcanvas）。
@@ -27,12 +23,14 @@ import { buildReservationCommandFromDefinition } from '@/features/command-reserv
 
 export type CanvasMapProps = {
     sector: SectorTerrainData;
+    selectedCoord: TileCoord | null;
+    resolveTerrain?: TerrainResolver;
     settings: ResolvedMapSettings;
     onSelect?: OnSelectTile;
     islandName?: string;
 };
 
-export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapProps) {
+export function CanvasMap({ sector, selectedCoord, resolveTerrain, settings, onSelect, islandName }: CanvasMapProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -47,87 +45,19 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
 
     const viewRef = useRef<ViewState>({ offsetX: 0, offsetY: 0, scale: initialScale });
 
-    const {
-        popup,
-        anchorPosition,
-        onCellHovered: onCellHoveredRaw,
-        onViewChange,
-    } = usePopupState({
+    const { bubble, onCellHovered, onViewChange } = useTerrainBubble({
         terrain_grid,
         viewRef,
         baseTileSize,
     });
 
-    const [selectedPopup, setSelectedPopup] = useState<{
-        coord: { x: number; y: number };
-        cell: import('@/shared/terrain-types').TerrainCell;
-        visible: boolean;
-    } | null>(null);
-    const [selectedAnchor, setSelectedAnchor] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-    const [commandAnimKey, setCommandAnimKey] = useState(0);
-    const commandFadeTimerRef = useRef<number | null>(null);
-    const commandRafRef = useRef<number | null>(null);
-
-    const { addCommand } = useGameSessionActions();
-
-    const clearCommandFadeTimer = useCallback(() => {
-        if (commandFadeTimerRef.current !== null) {
-            window.clearTimeout(commandFadeTimerRef.current);
-            commandFadeTimerRef.current = null;
-        }
-    }, []);
-
-    const clearCommandRaf = useCallback(() => {
-        if (commandRafRef.current !== null) {
-            window.cancelAnimationFrame(commandRafRef.current);
-            commandRafRef.current = null;
-        }
-    }, []);
-
-    const closeCommandPopup = useCallback(() => {
-        clearCommandFadeTimer();
-        clearCommandRaf();
-        setSelectedPopup((prev) => (prev ? { ...prev, visible: false } : null));
-        commandFadeTimerRef.current = window.setTimeout(() => {
-            setSelectedPopup(null);
-        }, 150);
-    }, [clearCommandFadeTimer, clearCommandRaf]);
-
-    useEffect(() => {
-        return () => {
-            clearCommandFadeTimer();
-            clearCommandRaf();
-        };
-    }, [clearCommandFadeTimer, clearCommandRaf]);
-
-    const handleCellHovered = useCallback(
-        (cell: import('../engine/types').HoverCell | null) => {
-            onCellHoveredRaw(cell);
-        },
-        [onCellHoveredRaw]
-    );
-
     const handleSelectTile = useCallback(
-        (selection: Parameters<OnSelectTile>[0] | null) => {
-            if (selection) {
-                clearCommandFadeTimer();
-                clearCommandRaf();
-                setCommandAnimKey((k) => k + 1);
-                onCellHoveredRaw(null);
-                setSelectedPopup({ coord: selection.coord, cell: selection.cell, visible: false });
-                setSelectedAnchor({
-                    x: (sizeRef.current.width || 0) * 0.5,
-                    y: (sizeRef.current.height || 0) * 0.5,
-                });
-                commandRafRef.current = window.requestAnimationFrame(() => {
-                    setSelectedPopup((prev) => (prev ? { ...prev, visible: true } : prev));
-                });
-            } else {
-                closeCommandPopup();
-            }
+        (selection: MapSelection | null) => {
+            // 確定したマスにはコマンド入力が開くので、バブルを重ねて出さない
+            if (selection) onCellHovered(null);
             onSelect?.(selection);
         },
-        [clearCommandFadeTimer, clearCommandRaf, closeCommandPopup, onCellHoveredRaw, onSelect]
+        [onCellHovered, onSelect]
     );
     const initView = useCallback(
         (canvasW: number, canvasH: number) => {
@@ -164,6 +94,7 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
     });
 
     const { handleTileConfirm, clearSelection } = useTileSelection({
+        selectedCoord,
         selectedTileRef,
         cursorAnimStartRef,
         cursorLoop,
@@ -185,7 +116,7 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
         containerRef,
         resolveHoverCell,
         handleHoverChange,
-        handleCellHovered
+        onCellHovered
     );
 
     // Canvasサイズをコンテナに追従させ、初回のみ中央揃えを実行
@@ -264,16 +195,7 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
 
         // マウス・ペンはホバー中のマスをクリックで即確定、タッチは同一マスへの2回目のタップで確定する
         handleTapForHover(e, handleTileConfirm, (cell) => {
-            const selected = selectedTileRef.current;
-            if (selected) {
-                // マップ外タップ時、またはポップアップ非表示中に別マスがタップされたら選択を解除する
-                // （ポップアップ表示中に別マスを1回タップしただけでは消さない）
-                const shouldClear =
-                    !cell || (!selectedPopup?.visible && (cell.x !== selected.x || cell.y !== selected.y));
-                if (shouldClear) {
-                    clearSelection();
-                }
-            }
+            if (!cell) clearSelection();
         });
     };
 
@@ -306,43 +228,15 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
                     ref={overlayCanvasRef}
                     style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
                 />
-                {popup !== null &&
-                    (() => {
-                        const terrain = getClassicTerrain(popup.cell.type);
-                        return (
-                            <TerrainBubble
-                                coord={popup.coord}
-                                terrainName={terrain?.name ?? popup.cell.type}
-                                terrainImage={terrain?.image}
-                                islandName={islandName}
-                                anchorPosition={anchorPosition}
-                                visible={popup.visible}
-                            />
-                        );
-                    })()}
-
-                {selectedPopup !== null &&
-                    (() => {
-                        const terrain = getClassicTerrain(selectedPopup.cell.type);
-                        return (
-                            <CommandInputPopup
-                                key={commandAnimKey}
-                                coord={selectedPopup.coord}
-                                cell={selectedPopup.cell}
-                                terrainName={terrain?.name ?? selectedPopup.cell.type}
-                                terrainImage={terrain?.image}
-                                islandName={islandName}
-                                anchorPosition={selectedAnchor}
-                                visible={selectedPopup.visible}
-                                onClose={closeCommandPopup}
-                                onSelectCommand={(def, quantity) => {
-                                    addCommand(
-                                        buildReservationCommandFromDefinition(def, quantity, selectedPopup.coord)
-                                    );
-                                }}
-                            />
-                        );
-                    })()}
+                {bubble !== null && (
+                    <TerrainBubble
+                        coord={bubble.item.selection.coord}
+                        terrain={resolveTerrainDisplay(bubble.item.selection.cell.type, resolveTerrain)}
+                        islandName={islandName}
+                        anchorPosition={bubble.item.anchor}
+                        visible={bubble.visible}
+                    />
+                )}
             </div>
         </div>
     );

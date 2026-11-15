@@ -1,19 +1,30 @@
-import type { TileCoord, TerrainCell } from '@/shared/terrain-types';
-import type { CommandDefinition } from '@/features/command-reservation/command-definition-types';
-import type { PopupPosition } from '@/features/map/engine/types';
+import type { TerrainCell, TerrainDisplay, TerrainResolver, TileCoord } from '@/shared/terrain-types';
+import type { CommandDefinition } from '@/features/command-reservation';
 
-export type CommandInputMode = 'classic' | 'admin';
+export type CommandInputMode = 'classic' | 'manage';
+
+export type CommandInputModeOption = {
+    mode: CommandInputMode;
+    label: string;
+};
+
+/** コマンド入力の対象マス */
+export type CommandInputTarget = {
+    coord: TileCoord;
+    cell: TerrainCell;
+};
 
 export type CommandInputPopupProps = {
     coord: TileCoord;
-    cell: TerrainCell;
-    terrainName: string;
-    terrainImage?: string;
+    terrain: TerrainDisplay;
     islandName?: string;
-    anchorPosition: PopupPosition;
     visible: boolean;
     onClose: () => void;
     onSelectCommand: (def: CommandDefinition, quantity: number) => void;
+};
+
+export type CommandInputPopupContainerProps = {
+    resolveTerrain?: TerrainResolver;
 };
 
 export type UseCommandInputResult = {

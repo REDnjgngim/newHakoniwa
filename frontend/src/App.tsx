@@ -2,10 +2,12 @@ import { HeaderStatusBar } from './features/island-status';
 import { HexMapPreview } from './features/map';
 import { Inspector, InspectorFrame } from './shared';
 import { CommandReservationPanel } from './features/command-reservation';
+import { CommandInputPopupContainer } from './features/command-input-popup';
 import { useGameSession } from './features/game-session';
+import { getClassicTerrain } from './rules/classic';
 
 export function App() {
-    const { sectorTerrain, islandStatus, selectTile } = useGameSession();
+    const { sectorTerrain, islandStatus, selectedCoordinate, selectTile } = useGameSession();
 
     return (
         <InspectorFrame>
@@ -26,9 +28,12 @@ export function App() {
                         </div>
                         <HexMapPreview
                             sector={sectorTerrain}
+                            selectedCoord={selectedCoordinate}
+                            resolveTerrain={getClassicTerrain}
                             onSelect={(selection) => selectTile(selection ? selection.coord : null)}
                             islandName={islandStatus.name}
                         />
+                        <CommandInputPopupContainer resolveTerrain={getClassicTerrain} />
                     </div>
                 </Inspector>
 

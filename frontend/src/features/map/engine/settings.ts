@@ -83,7 +83,7 @@ export const BOUNDARY_LINE_SETTINGS: BoundaryLineConfig = {
 
 // 注入された部分設定を既定値とマージし、描画側が参照する設定一式を解決する
 // （汎用のdeep mergeは型安全性が落ちるため、階層ごとに明示してマージする）
-export function resolveMapSettings(props: HexMapPreviewProps): ResolvedMapSettings {
+export function resolveMapSettings(props: Pick<HexMapPreviewProps, 'settings' | 'terrainImages'>): ResolvedMapSettings {
     const input: MapSettingsInput | undefined = props.settings;
     const defaults = MAP_VIEW_SETTINGS;
 

@@ -1,13 +1,7 @@
+import { TerrainSummary } from '@/shared';
 import type { TerrainBubbleProps } from '../engine/types';
 
-export function TerrainBubble({
-    coord,
-    terrainName,
-    terrainImage,
-    islandName,
-    anchorPosition,
-    visible,
-}: TerrainBubbleProps) {
+export function TerrainBubble({ coord, terrain, islandName, anchorPosition, visible }: TerrainBubbleProps) {
     return (
         <div
             style={{
@@ -19,25 +13,7 @@ export function TerrainBubble({
                 visible ? 'opacity-100' : 'opacity-0'
             }`}
         >
-            <div className="flex items-center justify-start gap-2">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-xs bg-[rgba(0,0,0,0.3)]">
-                    {terrainImage ? (
-                        <img
-                            src={terrainImage}
-                            alt={terrainName}
-                            className="size-8 object-contain [image-rendering:pixelated]"
-                        />
-                    ) : (
-                        <span className="text-xs text-cyan-200/70">?</span>
-                    )}
-                </div>
-                <div className="min-w-0 flex-1 text-left">
-                    <div className="truncate text-xs font-bold text-cyan-300">{islandName ?? '所属不明'}</div>
-                    <div className="truncate font-mono text-xs text-cyan-200/90 tabular-nums">
-                        ({coord.x},{coord.y}) {terrainName}
-                    </div>
-                </div>
-            </div>
+            <TerrainSummary size="sm" coord={coord} terrain={terrain} islandName={islandName} />
         </div>
     );
 }
