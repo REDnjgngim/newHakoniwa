@@ -10,6 +10,7 @@ const SLIDE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
 export type UseCommandListAnimationOptions = {
     commands: ReservationCommand[];
     listContainerRef: RefObject<HTMLDivElement | null>;
+    viewportRef?: RefObject<HTMLDivElement | null>;
 };
 
 export type UseCommandListAnimationReturn = {
@@ -35,6 +36,7 @@ function getComputedTranslateY(el: HTMLElement): number {
 export function useCommandListAnimation({
     commands,
     listContainerRef,
+    viewportRef,
 }: UseCommandListAnimationOptions): UseCommandListAnimationReturn {
     const rowMapRef = useRef<Map<string, HTMLDivElement>>(new Map());
     const itemMapRef = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -117,8 +119,10 @@ export function useCommandListAnimation({
         }
 
         const prevIds = prevCommandIdsRef.current;
+        let hasNewInsertion = false;
         commands.forEach((cmd) => {
             if (prevIds.has(cmd.id)) return;
+            hasNewInsertion = true;
             const el = itemMapRef.current.get(cmd.id);
             if (!el || typeof el.animate !== 'function') return;
             el.animate(
@@ -133,8 +137,19 @@ export function useCommandListAnimation({
             );
         });
 
+        if (hasNewInsertion) {
+            const viewport = viewportRef?.current;
+            if (viewport && viewport.scrollHeight > viewport.clientHeight) {
+                if (typeof viewport.scrollTo === 'function') {
+                    viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+                } else {
+                    viewport.scrollTop = viewport.scrollHeight;
+                }
+            }
+        }
+
         prevCommandIdsRef.current = activeIds;
-    }, [commands, removeExitingItem]);
+    }, [commands, removeExitingItem, viewportRef]);
 
     // 位置変化の FLIP アニメーションと直前座標スナップショット更新
     useLayoutEffect(() => {

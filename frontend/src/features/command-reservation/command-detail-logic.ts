@@ -1,4 +1,5 @@
 import type { ReservationCommand } from './types';
+import type { Coordinate } from '@/shared/terrain-types';
 import { getCommandDefinition } from './command-registry';
 import type {
     CommandDefinition,
@@ -70,6 +71,38 @@ export function buildTargetIslandUpdate(command: ReservationCommand, islandName:
         ...command,
         params: { ...command.params, targetIsland: islandName },
     };
+}
+
+/** コマンド定義と入力数量から予約コマンドを生成する */
+export function buildReservationCommandFromDefinition(
+    def: CommandDefinition,
+    quantity: number,
+    coordinate?: Coordinate
+): ReservationCommand {
+    const baseCommand: ReservationCommand = {
+        id: crypto.randomUUID(),
+        commandCode: def.commandCode,
+        commandType: def.commandType,
+        name: def.name,
+        coordinate: def.hasCoordinate ? coordinate : undefined,
+        estimatedTurn: def.estimatedTurn,
+        estimatedFundsDelta: def.estimatedFundsDelta,
+    };
+
+    const sliderSchema = def.parameterSchemas.find(
+        (schema): schema is SliderParamSchema => schema.kind === 'slider' && schema.key !== 'stackCount'
+    );
+
+    if (sliderSchema) {
+        const result = computeSliderUpdate(sliderSchema, baseCommand, quantity);
+        return {
+            ...baseCommand,
+            summaryText: result.summaryText,
+            params: result.updatedParams,
+        };
+    }
+
+    return quantity > 1 ? { ...baseCommand, params: { stackCount: quantity } } : baseCommand;
 }
 
 export type { ParameterSchema };

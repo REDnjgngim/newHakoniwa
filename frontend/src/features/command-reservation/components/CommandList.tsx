@@ -46,6 +46,7 @@ export function CommandList({
     const { visibleExitingItems, minContainerHeight, setRowRef, setItemRef, setExitingRef } = useCommandListAnimation({
         commands,
         listContainerRef,
+        viewportRef,
     });
     const {
         draggingIndex,

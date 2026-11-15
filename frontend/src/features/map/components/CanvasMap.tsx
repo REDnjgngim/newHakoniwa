@@ -18,6 +18,7 @@ import { usePopupState } from '../hooks/use-popup-state';
 import { getClassicTerrain } from '@/rules/classic';
 import { CommandInputPopup } from '@/features/command-input-popup';
 import { useGameSessionActions } from '@/features/game-session';
+import { buildReservationCommandFromDefinition } from '@/features/command-reservation/command-detail-logic';
 
 // ============================================================================
 // マップ本体（地形レイヤーとオーバーレイレイヤーの2枚のcanvas）。
@@ -335,16 +336,9 @@ export function CanvasMap({ sector, settings, onSelect, islandName }: CanvasMapP
                                 visible={selectedPopup.visible}
                                 onClose={closeCommandPopup}
                                 onSelectCommand={(def, quantity) => {
-                                    addCommand({
-                                        id: crypto.randomUUID(),
-                                        commandCode: def.commandCode,
-                                        commandType: def.commandType,
-                                        name: def.name,
-                                        coordinate: def.hasCoordinate ? selectedPopup.coord : undefined,
-                                        estimatedTurn: def.estimatedTurn,
-                                        estimatedFundsDelta: def.estimatedFundsDelta,
-                                        params: quantity > 1 ? { stackCount: quantity } : undefined,
-                                    });
+                                    addCommand(
+                                        buildReservationCommandFromDefinition(def, quantity, selectedPopup.coord)
+                                    );
                                 }}
                             />
                         );
