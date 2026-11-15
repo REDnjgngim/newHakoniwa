@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { useCommandReorder } from './use-command-reorder';
 
 describe('useCommandReorder 基本動作', () => {
-    it('Pointer down on drag handle でドラッグ開始', () => {
+    it('ハンドルを pointerdown しただけではドラッグ開始せず、移動しきい値を超えてドラッグ開始する', () => {
         const viewport = document.createElement('div');
         const ref = { current: viewport } as { current: HTMLElement | null };
         const onReorder = vi.fn();
@@ -30,6 +30,7 @@ describe('useCommandReorder 基本動作', () => {
 
         const event = new PointerEvent('pointerdown', {
             bubbles: true,
+            clientX: 10,
             clientY: 5,
             pointerId: 1,
         }) as unknown as Parameters<typeof result.current.handlePointerDown>[0];
@@ -38,6 +39,15 @@ describe('useCommandReorder 基本動作', () => {
 
         act(() => {
             result.current.handlePointerDown(event, 0);
+        });
+
+        expect(result.current.isPointerDragging).toBe(false);
+        expect(result.current.draggingIndex).toBeNull();
+
+        act(() => {
+            window.dispatchEvent(
+                new PointerEvent('pointermove', { bubbles: true, clientX: 10, clientY: 15, pointerId: 1 })
+            );
         });
 
         expect(result.current.isPointerDragging).toBe(true);
@@ -188,18 +198,14 @@ describe('useCommandReorder 基本動作', () => {
                 result.current.handlePointerDown(downEvent, 0);
             });
 
-            // 移動せずにそのまま pointerup（fromIndex === toIndex === 0）
+            // 移動せずにそのまま pointerup（クリック操作）ではドラッグ・settling にならず onReorder も呼ばれない
             const upEvent = new PointerEvent('pointerup', { bubbles: true, clientY: 30, pointerId: 1 });
             act(() => {
                 window.dispatchEvent(upEvent);
             });
-            expect(result.current.isSettling).toBe(true);
-
-            act(() => {
-                result.current.settleComplete();
-            });
-            expect(onReorder).not.toHaveBeenCalled();
+            expect(result.current.isPointerDragging).toBe(false);
             expect(result.current.isSettling).toBe(false);
+            expect(onReorder).not.toHaveBeenCalled();
         });
 
         it('幾何計算：viewport が null の場合クラッシュせず onReorder も呼ばれない', () => {

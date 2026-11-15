@@ -42,6 +42,7 @@ const AUTO_SCROLL_MARGIN_PX = 56;
 const AUTO_SCROLL_STEP_PX = 8;
 const CLICK_SUPPRESS_MS = 400;
 const CLICK_SUPPRESS_DY_PX = 8;
+const DRAG_ACTIVATION_THRESHOLD_PX = 3;
 const COLLAPSED_ITEM_HEIGHT_PX = 60; // 縮小表示時の行の高さ（枠線込み）
 /** PC・スマホ共通の Pointer Events による並び替え操作 */
 export function useCommandReorder(options: UseCommandReorderOptions): UseCommandReorderReturn {
@@ -85,6 +86,7 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             if (!viewport || currentItemCount <= 0) return null;
             const rows = viewport.querySelectorAll('[data-command-row-index]');
             if (rows.length === 0) return null;
+            const currentOver = dragOverIndexRef.current ?? excludeIndex ?? 0;
             let insertAt = 0;
             let seen = 0;
             rows.forEach((row) => {
@@ -92,11 +94,14 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
                 const parsed = raw === null ? Number.NaN : Number(raw);
                 if (!Number.isInteger(parsed) || parsed < 0 || parsed >= currentItemCount) return;
                 if (excludeIndex !== null && parsed === excludeIndex) return;
+                const rowOrderIndex = seen;
                 seen += 1;
                 const rect = row instanceof HTMLElement ? row.getBoundingClientRect() : null;
                 if (rect === null) return;
-                const mid = rect.top + rect.height / 2;
-                if (clientY >= mid) insertAt += 1;
+                // プレースホルダーより下の行は25%、上の行は75%を境界にして素早く安定して入れ替える
+                const ratio = rowOrderIndex >= currentOver ? 0.25 : 0.75;
+                const threshold = rect.top + rect.height * ratio;
+                if (clientY >= threshold) insertAt += 1;
             });
             if (seen === 0) return excludeIndex;
             return Math.max(0, Math.min(insertAt, currentItemCount - 1));
@@ -146,20 +151,11 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             startClientX: event.clientX,
             currentClientY: event.clientY,
             currentClientX: event.clientX,
-            activated: true,
+            activated: false,
             grabOffsetY,
             grabbedHeight: rowRect ? rowRect.height : 0,
             sourceElement,
         };
-        pointerActiveRef.current = true;
-        setDraggingIndex(index);
-        setDragOverIndex(index);
-        dragOverIndexRef.current = index;
-        setDragOffsetY(0);
-        setIsPointerDragging(true);
-        const rowHeight = sourceElement?.getBoundingClientRect().height ?? null;
-        setDraggingItemHeight(rowHeight && rowHeight > 0 ? rowHeight : null);
-        setDraggingItemTop(sourceElement instanceof HTMLElement ? sourceElement.offsetTop : null);
         return;
     }, []);
 
@@ -169,6 +165,19 @@ export function useCommandReorder(options: UseCommandReorderOptions): UseCommand
             if (!state || event.pointerId !== state.pointerId) return;
             state.currentClientX = event.clientX;
             state.currentClientY = event.clientY;
+            if (!state.activated) {
+                const dx = event.clientX - state.startClientX;
+                const dy = event.clientY - state.startClientY;
+                if (Math.hypot(dx, dy) < DRAG_ACTIVATION_THRESHOLD_PX) return;
+                state.activated = true;
+                pointerActiveRef.current = true;
+                setDraggingIndex(state.startIndex);
+                setDragOverIndex(state.startIndex);
+                dragOverIndexRef.current = state.startIndex;
+                setDragOffsetY(0);
+                setIsPointerDragging(true);
+                setDraggingItemHeight(state.grabbedHeight > 0 ? state.grabbedHeight : null);
+            }
             const viewport = viewportRef.current;
             if (viewport) {
                 const viewportRect = viewport.getBoundingClientRect();

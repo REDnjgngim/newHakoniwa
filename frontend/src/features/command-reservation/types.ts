@@ -17,3 +17,10 @@ export type ReservationCommand = {
 export type TabType = 'reservation' | 'log' | 'message';
 
 export type BottomSheetSnap = 'hidden' | 'collapsed' | 'half' | 'expanded' | 'full';
+
+export type ExitingCommandItem = {
+    command: ReservationCommand;
+    displayOrder: number;
+    top: number;
+    height: number;
+};

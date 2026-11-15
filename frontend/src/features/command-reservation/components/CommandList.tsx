@@ -7,6 +7,7 @@ import { CommandListItem } from './CommandListItem';
 import { CommandDetailEditor } from './CommandDetailEditor';
 import { mapReorderIndicesToIds } from '../command-list-reorder';
 import { useCommandReorder } from '../hooks/use-command-reorder';
+import { useCommandListAnimation } from '../hooks/use-command-list-animation';
 
 export type CommandListProps = {
     commands: ReservationCommand[];
@@ -41,6 +42,11 @@ export function CommandList({
     };
 
     const viewportRef = useRef<HTMLDivElement | null>(null);
+    const listContainerRef = useRef<HTMLDivElement | null>(null);
+    const { visibleExitingItems, minContainerHeight, setRowRef, setItemRef, setExitingRef } = useCommandListAnimation({
+        commands,
+        listContainerRef,
+    });
     const {
         draggingIndex,
         dragOverIndex,
@@ -67,7 +73,7 @@ export function CommandList({
             if (draggingItemTop === null && floatingTop === null) settleComplete();
             return () => cancelAnimationFrame(frame);
         }
-        const container = viewportRef.current?.querySelector('.relative');
+        const container = listContainerRef.current;
         if (!(container instanceof HTMLElement)) {
             settleComplete();
             return;
@@ -75,8 +81,22 @@ export function CommandList({
         const containerRect = container.getBoundingClientRect();
         const placeholderRect = placeholder.getBoundingClientRect();
         const targetTop = placeholderRect.top - containerRect.top;
+        if (draggingItemTop !== null && Math.abs(targetTop - draggingItemTop) < 0.5) {
+            const frame = requestAnimationFrame(() => {
+                settleComplete();
+                setSettlingTargetTop(null);
+            });
+            return () => cancelAnimationFrame(frame);
+        }
         const frame = requestAnimationFrame(() => setSettlingTargetTop(targetTop));
-        return () => cancelAnimationFrame(frame);
+        const fallbackTimer = window.setTimeout(() => {
+            settleComplete();
+            setSettlingTargetTop(null);
+        }, 140);
+        return () => {
+            cancelAnimationFrame(frame);
+            window.clearTimeout(fallbackTimer);
+        };
         // eslint-disable-next-line @eslint-react/exhaustive-deps
     }, [isSettling, settleComplete, draggingItemTop]);
 
@@ -157,27 +177,30 @@ export function CommandList({
             rows.push(
                 <div
                     key={cmd.id}
+                    ref={(el) => setRowRef(cmd.id, el)}
                     data-command-row-index={index}
                     onPointerDown={(e) => handlePointerDown(e, index)}
-                    className="touch-pan-y transition-all duration-150"
+                    className="relative z-10 touch-pan-y"
                 >
-                    <CommandListItem
-                        command={cmd}
-                        terrain={terrain}
-                        displayOrder={index + 1}
-                        isExpanded={isExpanded}
-                        isFocused={isFocused}
-                        renderDetail={(command) => (
-                            <CommandDetailEditor
-                                command={command}
-                                onUpdate={(updated) => onUpdateCommand(command.id, updated)}
-                                islandOptions={islandOptions}
-                            />
-                        )}
-                        onToggleExpand={() => onToggleExpand(cmd.id)}
-                        onSelect={() => handleRowSelect(cmd)}
-                        onDelete={() => onDeleteCommand(cmd.id)}
-                    />
+                    <div ref={(el) => setItemRef(cmd.id, el)}>
+                        <CommandListItem
+                            command={cmd}
+                            terrain={terrain}
+                            displayOrder={index + 1}
+                            isExpanded={isExpanded}
+                            isFocused={isFocused}
+                            renderDetail={(command) => (
+                                <CommandDetailEditor
+                                    command={command}
+                                    onUpdate={(updated) => onUpdateCommand(command.id, updated)}
+                                    islandOptions={islandOptions}
+                                />
+                            )}
+                            onToggleExpand={() => onToggleExpand(cmd.id)}
+                            onSelect={() => handleRowSelect(cmd)}
+                            onDelete={() => onDeleteCommand(cmd.id)}
+                        />
+                    </div>
                 </div>
             );
 
@@ -209,7 +232,8 @@ export function CommandList({
                     transition: isSettling ? 'top 100ms ease-out' : undefined,
                     opacity: 0.9,
                 }}
-                onTransitionEnd={() => {
+                onTransitionEnd={(e) => {
+                    if (e.target !== e.currentTarget) return;
                     if (isSettling) {
                         settleComplete();
                         setSettlingTargetTop(null);
@@ -235,9 +259,39 @@ export function CommandList({
         );
     }
     return (
-        <div ref={viewportRef} data-testid="command-list-container" className="flex-1 overflow-y-auto p-2 select-none">
-            <div className="relative">
-                {commands.length === 0 ? (
+        <div
+            ref={viewportRef}
+            data-testid="command-list-container"
+            className="flex-1 overflow-x-hidden overflow-y-auto p-2 select-none"
+        >
+            <div
+                ref={listContainerRef}
+                className="relative"
+                style={minContainerHeight !== undefined ? { minHeight: minContainerHeight } : undefined}
+            >
+                {visibleExitingItems.map((item) => (
+                    <div
+                        key={`exiting-${item.command.id}`}
+                        ref={(el) => setExitingRef(item.command.id, el)}
+                        data-exiting-command-id={item.command.id}
+                        className="pointer-events-none absolute inset-x-0 z-0 origin-center"
+                        style={{ top: item.top, height: item.height }}
+                        aria-hidden="true"
+                    >
+                        <CommandListItem
+                            command={item.command}
+                            terrain={terrain}
+                            displayOrder={item.displayOrder}
+                            isExpanded={false}
+                            isFocused={false}
+                            renderDetail={() => null}
+                            onToggleExpand={() => {}}
+                            onSelect={() => {}}
+                            onDelete={() => {}}
+                        />
+                    </div>
+                ))}
+                {commands.length === 0 && visibleExitingItems.length === 0 ? (
                     <div className="py-12 text-center text-sm text-slate-400">予約されたコマンドはありません</div>
                 ) : (
                     renderRows()
